@@ -1,0 +1,95 @@
+#+TITLE: Geometricly Deriving Mp/Me
+#+AUTHOR: Nolan Eakins <nolan@eakins.net>
+
+* Abstract
+
+The ratio between the mass of a proton to that of an electron is derived from the geometry of quantum space-time.
+
+* Introduction
+
+There have been any attempts at calculating the rtio between a proton and an electron. [citation]
+While it is easy to accept the value of the ratio, 1836, [citation] as a given, light would be shed on the Universe if this value can be derived from first principles.
+Using the map provided by quantum space-time, this article will demonstrate that the Mp/Me ratio is encoded in the geometry of quantum space-time.
+
+* Quantum Space-time
+
+Quantum space-time as described by Thad Roberts theorizes that spacetime itself is a superfluid made from elemental quantums of space. [citation]
+These quantums contain a volume of space and would be exactly like voxels except QST places these in a three dimensional superspace where their superfluid motions can take place.
+What results is a fuzzy picture, where the "voxels" move and jitter, at the lowest level to any observer that spans many of these "voxels".
+
+Light in QST is a wave through the superfluid of spaces.
+This means at the smallest level light is one quanta colliding with another quanta.
+These back and forth collisions set the speed of light.
+
+As with any wave in any medium, the density of the quantums will cause light to have a curved path while traveling through different densities.
+Since light curves around masses per General Relativity, space is thus more dense around more massive objects.
+
+The more massive proton is surrounded by more space than an electron.
+The amount of space should be proportional to their masses.
+Therefore the number of quantums around a proton to an electron should be the same ratio of their masses: Qp/Qe = Mp/Me
+
+* Our Particles
+
+** 1q
+
+Since Qe, the number of quanta in an electron, is in the denominator we can assume that it is one.
+To move spatially, a single energized quanta needs to collide with another quanta.
+This is half of a *tick*. (todo def)
+To do so in all three spatial dimensions, it needs to collide with three quantums.
+One quantum for each side of the quantum in the direction of motion.
+
+(todo figure of 1q,1t)
+
+** 2q
+
+Now it's possible for quantums to coalese into structures.
+A two quantum structure is just that: two quantums.
+Twice the space and twice the number of sides.
+
+Unlike a single quanta, two quanta can not move in a single tick.
+It needs to move two quanta to move its length.
+This can take 2 ticks, but by time this has occurred two more ticks in the direction of motion will have been caused.
+
+(todo figure 2q)
+
+To move spatially, these two quanta both need to collide with a quanta for each axis in the direction of motion.
+Instead of three quanta, this is six quanta.
+As this introduces 4 ticks, we need to take into account 4 layers of quanta like this. 6 quanta leads to 18 quanta and so on.
+
+(todo fig)
+
+
+** 3q
+
+Three quanta is exactly that: three times the quanta with three times the sides.
+Unlike two quantums, three can take up to three ticks or sometimes two depending on their arrangument.
+
+(todo fig)
+
+Just like two quanta, there needs to be three quanta for each quanta to move.
+As more ticks are involved the number of quanta involved exponentially grows.
+Therefore this oscillation will cause up to 3*3^(2*T-2) (todo) quanta to be needed.
+
+This can be generalized as: Q*6/2 * 3^(T-1)
+
+
+* Results
+
+As can be seen in the table, 1q needs 1/2 a tick to move into 3q.
+2q needs 2 ticks to move into 648q,
+and 3q roughly averages 2.6 ticks to move into 5468q.
+
+| # of quanta | 1/2 # osciltations | # sides | Result | Result/Result e- |
+| 1 | 1/2 | 3 | 3 | 1 |
+| 2 | 2 | 162 | 648 | 216 |
+| 3 | (2 + 3)/2 | 729 | 5467.5 | 1822 |
+
+Dividing those products by 1q's product the 1q:2q:3q ratio is 1:216:1822.
+That's extremely close to Me:Mm:Mp.
+
+
+* Conclusion
+
+These numbers are of the exact magnitude required to agree with the measured values of Mp, Me, and even Mm.
+As evidenced by the average in 3q, further refinement should be possible by taking into account the actual superspatial motions.
+With this it's safe to conclude that mass is a function of a number of volumes, their surface area, and time.
