@@ -38,7 +38,7 @@ Therefore the number of quantums around a proton to an electron should be the sa
 
 Since $Q_{e^-}$, the number of quanta in an electron, is in the denominator we can assume that it is one.
 To move spatially, a single energized quanta needs to collide with another quanta.
-This is half of a *tick*. (todo def)
+This is a *tick*.
 To do so in all three spatial dimensions, it needs to collide with three quantums.
 One quantum for each side of the quantum in the direction of motion.
 
@@ -97,12 +97,12 @@ This can be generalized as: $\frac{6Q}{2} \cdot 3^{2T-2}$
 
 * Results
 
-As can be seen in the table, 1q needs $\frac{1}{2}$ a tick to move into 3q.
+As can be seen in the table, 1q needs a tick to move into 3q.
 2q needs 2 ticks to move into 648q,
 and 3q roughly averages 2.5 ticks to move into 5468q.
 
-| # of quanta | 1/2 # osciltations | # sides | Result | Result/Result e- |
-| 1 | $\frac{1}{2}$ | 3 | 3 | 1 |
+| # of quanta     | # ticks            | # sides     | $Product$                     | $\frac{Product}{Product_{1q}}$    |
+| 1 | 1             | 3 | 3 | 1 |
 | 2 | 2 | 162 | 648 | 216 |
 | 3 | $\frac{2 + 3}{2}$ | 729 | 5467.5 | 1822 |
 
@@ -112,6 +112,6 @@ That's extremely close to $M_{e^-}:M_\mu:M_{p^+}$.
 
 * Conclusion
 
-These numbers are of the exact magnitude required to agree with the measured values of $M_{p^+}$, $M_{e^-}$, and even $M_\mu$.
+These numbers are of the magnitude required to agree with the measured values of $M_{p^+}$, $M_{e^-}$, and even $M_\mu$.
 As evidenced by the average in 3q, further refinement should be possible by taking into account the actual superspatial motions.
 With this it's safe to conclude that mass is a function of a number of volumes, their surface area, and time.
