@@ -1,4 +1,4 @@
-#+TITLE: Geometricly Deriving M_p/M_e
+#+TITLE: Geometrically Deriving M_p/M_e
 #+AUTHOR: Nolan Eakins <nolan@eakins.net>
 
 * Abstract
@@ -7,14 +7,14 @@ The ratio between the mass of a proton to that of an electron is derived from th
 
 * Introduction
 
-There have been any attempts at calculating the rtio between a proton and an electron. [citation]
+There have been any attempts at calculating the ratio between a proton and an electron. [citation]
 While it is easy to accept the value of the ratio, 1836, [citation] as a given, light would be shed on the Universe if this value can be derived from first principles.
 Using the map provided by quantum space-time, this article will demonstrate that the $\frac{M_{p^+}}{M_{e^-}}$ ratio is encoded in the geometry of quantum space-time.
 
 * Quantum Space-time
 
-Quantum space-time as described by Thad Roberts theorizes that spacetime itself is a superfluid made from elemental quantums of space. [citation]
-These quantums contain a volume of space and would be exactly like voxels except QST places these in a three dimensional superspace where their superfluid motions can take place.
+Quantum space-time as described by Thad Roberts theorizes that space-time itself is a superfluid made from elemental quantums of space. [citation]
+These quantums contain a volume of space and would be exactly like voxels except QST places these in a three dimensional super-space where their superfluid motions can take place.
 What results is a fuzzy picture, where the "voxels" move and jitter, at the lowest level to any observer that spans many of these "voxels".
 
 Light in QST is a wave through the superfluid of spaces.
@@ -52,7 +52,7 @@ One quantum for each side of the quantum in the direction of motion.
 
 ** 2q
 
-Now it's possible for quantums to coalese into structures.
+Now it's possible for quantums to coalesce into structures.
 A two quantum structure is just that: two quantums.
 Twice the space and twice the number of sides.
 
@@ -76,7 +76,7 @@ As this introduces 4 ticks, we need to take into account 4 layers of quanta like
 ** 3q
 
 Three quanta is exactly that: three times the quanta with three times the sides.
-Unlike two quantums, three can take up to three ticks or sometimes two depending on their arrangument.
+Unlike two quantums, three can take up to three ticks or sometimes two depending on their arrangement.
 
 (todo fig)
 
@@ -113,5 +113,5 @@ That's extremely close to $M_{e^-}:M_\mu:M_{p^+}$.
 * Conclusion
 
 These numbers are of the magnitude required to agree with the measured values of $M_{p^+}$, $M_{e^-}$, and even $M_\mu$.
-As evidenced by the average in 3q, further refinement should be possible by taking into account the actual superspatial motions.
+As evidenced by the average in 3q, further refinement should be possible by taking into account the actual super-spatial motions.
 With this it's safe to conclude that mass is a function of a number of volumes, their surface area, and time.
