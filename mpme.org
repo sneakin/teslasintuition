@@ -1,9 +1,10 @@
 #+TITLE: Geometrically Deriving M_p/M_e
 #+AUTHOR: Nolan Eakins <nolan@eakins.net>
+#+OPTIONS: toc:nil
 
-* Abstract
-
+#+BEGIN_ABSTRACT
 The ratio between the mass of a proton to that of an electron is derived from the geometry of quantum space-time.
+#+END_ABSTRACT
 
 * Introduction
 
@@ -131,8 +132,6 @@ With this it's safe to conclude that mass is a function of a number of volumes, 
 [fn:MpMe] An Essay on Numerology of the Proton to Electron Mass Ratio, Alexander Kritov, /Progress In Physics/, Volume 11 (2015), Issue 1 (January) http://www.ptep-online.com/index_files/2015/PP-40-04.PDF
 [fn:WP-proton] Proton, /Wikipedia/, https://en.wikipedia.org/wiki/Proton
 [fn:WP-muon] Muon, /Wikipedia/, https://en.wikipedia.org/wiki/Muon
-
-* Code
 
 #+BEGIN_COMMENT
 #+BEGIN_SRC emacs-lisp
