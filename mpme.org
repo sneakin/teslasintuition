@@ -1,4 +1,4 @@
-#+TITLE: Geometrically Deriving M_p/M_e
+#+TITLE: Draft: Geometrically Deriving M_p/M_e
 #+AUTHOR: Nolan Eakins <nolan@eakins.net>
 #+OPTIONS: toc:nil
 
@@ -8,8 +8,8 @@ The ratio between the mass of a proton to that of an electron is derived from th
 
 * Introduction
 
-There have been any attempts at calculating the ratio between a proton and an electron. [fn:MpMe]
-While it is easy to accept the value of the ratio, 1836, [fn:WP-proton] as a given, light would be shed on the Universe if this value can be derived from first principles.
+There have been any attempts at calculating the ratio between a proton and an electron.
+While it is easy to accept the value of the ratio, $1836.15267245(75) \pm 4.1 \cdot 10^-10$ [fn:MpMe], as a given, light would be shed on the Universe if this value can be derived from first principles.
 Using the map provided by quantum space-time, this article will demonstrate that the $\frac{M_{p^+}}{M_{e^-}}$ ratio is encoded in the geometry of quantum space-time.
 
 * Quantum Space-time
@@ -24,8 +24,7 @@ These back and forth collisions set the speed of light.
 
 As with any wave in any medium, the density of the quantums will cause light to have a curved path while traveling through different densities.
 Since light curves around masses per General Relativity, space is thus more dense around more massive objects.
-
-The more massive proton is surrounded by more space than an electron.
+Therefore the more massive proton is surrounded by more space than an electron.
 The amount of space should be proportional to their masses.
 Therefore the number of quantums around a proton to an electron should be the same ratio of their masses:
 
@@ -35,72 +34,79 @@ Therefore the number of quantums around a proton to an electron should be the sa
 
 * Our Particles
 
+In QST "mass specifically denotes the presence of a localized distortion"[fn:EI] while common sense says masses have volume.
+Therefore masses are a number of quanta in a volume.
+
+Since an electron is less massive than a proton, it will be our quanta:
+$Q_{e^+} / V = 1q$.
+
 ** 1q
 
-Since $Q_{e^-}$, the number of quanta in an electron, is in the denominator we can assume that it is one.
-To move spatially, a single energized quanta needs to collide with another quanta.
-This is a *tick*.
+To move spatially, a single quanta, 1q, needs to collide with another quanta to take its place.
+This is a /tick/.
 
 \begin{equation}
 \def\bsquare{\unicode{x25A0}}
 \def\square{\unicode{x25A1}}
-\bsquare \rightarrow \square
+\bsquare \to \square
 \end{equation}
 
-To do so in all three spatial dimensions, it needs to collide with three quantums.
-One quantum for each side of the quantum in the direction of motion.
+To do so in all three spatial dimensions, a quanta needs to collide with three quantums.
+A quantum for each spatial axis.
 
 \begin{equation}
 \def\bsquare{\unicode{x25A0}}
 \def\square{\unicode{x25A1}}
-\bsquare \rightarrow \square ^ \square _ \square
+\bsquare \to \square ^ \square _ \square
 \end{equation}
 
 ** 2q
 
-Now it's possible for quantums to coalesce into structures.
-A two quantum structure is just that: two quantums.
-Twice the space and twice the number of sides.
+Now it's possible for masses to coalesce into structures.
+A 2q structure is just that: twice the quantums in twice the volume with twice the surface area.
 
-Unlike a single quanta, two quanta can not move in a single tick.
-It needs to move two quanta to move its length.
+Unlike 1q, 2q can not move in a single tick.
+It needs to move twice as far as 1q to move its length.
 This can take 2 ticks, but by time this has occurred two more ticks in the direction of motion will have been caused.
 
 \begin{equation}
-\bsquare \bsquare \rightarrow \square \rightarrow \square \rightarrow \square \rightarrow \square
+\bsquare \bsquare \to \square \to \square \to \square \to \square
 \end{equation}
 
-To move spatially, these two quanta both need to collide with a quanta for each axis in the direction of motion.
-Instead of three quanta, this is six quanta.
-As this introduces 4 ticks, we need to take into account 4 layers of quanta like this. 6 quanta leads to 18 quanta and so on until 162q 4 ticks away.
+To move spatially, these two volumes both need to collide with a volume for each axis in the direction of motion.
+Instead of 3q, this is 6q.
+As this introduces 4 ticks, we need to take into account 4 layers of volumes like this: 6q leads to 18q and so on until 162q which is 4 ticks away.
 
 (todo fig)
 
 
 ** 3q
 
-Three quanta is exactly that: three times the quanta with three times the sides.
-Unlike two quantums, three can take up to three ticks or sometimes two depending on their arrangement.
+3q is exactly that: three times the quanta with three times the sides.
+Unlike 2q, three can take up to three ticks or sometimes two depending on their arrangement.
 50:50 odds will be assumed for this article's approximation.
 
 \begin{equation}
-\bsquare^\bsquare_\bsquare \rightarrow \square \rightarrow \square \rightarrow \square \rightarrow \square
+\bsquare^\bsquare_\bsquare \to \square \to \square \to \square \to \square
 \end{equation}
 
 \begin{equation}
-\bsquare \bsquare \bsquare \rightarrow \square \rightarrow \square \rightarrow \square \rightarrow \square \rightarrow \square \rightarrow \square
+\bsquare \bsquare \bsquare \to \square \to \square \to \square \to \square \to \square \to \square
 \end{equation}
 
-Just like two quanta, there needs to be three quanta for each quanta to move.
+Just like 2q, there needs to be 3q for each quanta to move.
 As more ticks are involved the number of quanta involved exponentially grows.
-Therefore this oscillation will cause up to 729 quanta to be needed.
+Therefore this oscillation will cause up to 729q to be needed.
 
-This can be generalized as: $\frac{6Q}{2} \cdot 3^{2T-1}, T > 1$
+This can be generalized as:
+$\begin{align}
+\frac{6Q}{2} \cdot 3^{2T-1} & T > 1
+\end{align}$
 
 ** 4q
 
 \begin{equation}
-\bsquare^\bsquare_\bsquare\bsquare \rightarrow \square \rightarrow \square \rightarrow \square \rightarrow \square
+\bsquare^\bsquare_\bsquare\bsquare \to \square \to \square \to \square \to \square
 \end{equation}
 
 * Results
@@ -118,15 +124,19 @@ and 3q roughly averages 2.5 ticks to move into 729q for a product of 5467.5.
 #+TBLFM: $3=($1*6/2)*3^if($1<=1, 0, (2*$2)-1)::$4=$3*$2*$1::$5=$4/@2$4
 
 Dividing those products by 1q's product the $1q:2q:3q$ ratio is $1:216:1822$.
-That's extremely close to $M_{e^-}:M_\mu:M_{p^+} \rightarrow 0.511:105.7:938.3 \rightarrow 1:207:1836$.
+That's extremely close to $M_{e^-}:M_\mu:M_{p^+} \to 0.511:105.7:938.3 \to 1:207:1836$.
 
-Beyond 3q, we hit a number that nears that of $M_{e^-}:M_\tau \rightarrow 0.511:1776.82 \rightarrow 1:3477$ at 4q[fn:WP-muon].
+Beyond 3q, we hit a number that nears that of $M_{e^-}:M_\tau \to 0.511:1776.82 \to 1:3477$ at 4q[fn:WP-muon].
 
 * Conclusion
 
+#+BEGIN_QUOTE
+"It is easy to see that expression simplicity and explain-ability in opposite determines its precision."[fn:MpMe]
+#+END_QUOTE
+
 These numbers are of the magnitude required to agree with the measured values of $M_{p^+}$, $M_{e^-}$, and even $M_\mu$.
 As evidenced by the average in 3q, further refinement should be possible by taking into account the actual super-spatial motions.
-With this it's safe to conclude that mass is a function of a number of volumes, their surface area, and time.
+With this mass becomes a function of a number of volumes, their surface area, and time.
 
 [fn:EI] /Einstein's Intuition/, Thad Roberts, 2015, http://einsteinsintuition.com/
 [fn:MpMe] An Essay on Numerology of the Proton to Electron Mass Ratio, Alexander Kritov, /Progress In Physics/, Volume 11 (2015), Issue 1 (January) http://www.ptep-online.com/index_files/2015/PP-40-04.PDF
