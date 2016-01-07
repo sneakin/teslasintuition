@@ -98,7 +98,7 @@ Therefore this oscillation will cause up to 729q to be displaced.
 For leptons greater than 1q this can be generalized as:
 
 $\begin{align}
-T_{in} \cdot (Q \cdot 3^{T_{out}})^2
+T_{out} \cdot (Q \cdot 3^{T_{in}})^2
 \end{align}$
 
 ** 4q
@@ -117,7 +117,7 @@ As can be seen in the table, 1q needs a tick to move into 3q yielding a result o
 2q needs 2 ticks to displace 9q for a result of 648,
 and 3q roughly averages 2.5 ticks to displace ~15q for a product of ~5467.
 
-| # of quanta | # ticks in | # ticks out | #q displaced | $T_{in}\cdot(Q\cdot3^{T_{out}})^2$ | $\frac{Product}{Product_{1}}$ |
+| # of quanta | # ticks in | # ticks out | #q displaced | $T_{out}\cdot(Q\cdot3^{T_{in}})^2$ | $\frac{result}{result_{1}}$   |
 |-------------+------------+------------+--------------+-----------------------+-------------------------------|
 |           1 |        0.5 |          1 |    1.7320508 |             3.0000000 |                            1. |
 |           2 |          2 |          2 |            9 |                   648 |                          216. |
@@ -132,7 +132,7 @@ Beyond 3q, we hit a number that nears that of $M_{e^-}:M_\tau \to 0.511:1776.82 
 
 And brute forcing the number of ticks:
 
-| # of quanta | # ticks in | # ticks out | #q displaced | $T_{in}\cdot(Q\cdot3^{T_{out}})^2$ | $\frac{Product}{Product_{1}}$ |
+| # of quanta | # ticks in | # ticks out | #q displaced | $T_{out}\cdot(Q\cdot3^{T_{in}})^2$ | $\frac{result}{result_{1}}$ |
 |-------------+------------+------------+--------------+------------------------------+-------------------------------|
 |           1 |        0.5 |          1 |    1.7320508 |                    3.0000000 |                            1. |
 |           2 |       1.98 |          2 |    8.8044065 |                    620.14059 |                     206.71353 |
