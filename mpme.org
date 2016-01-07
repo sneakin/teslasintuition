@@ -190,3 +190,5 @@ With this mass becomes a function of a number of volumes, their surface area, an
 
 #+END_SRC
 #+END_COMMENT
+
+Copyright 2016 Nolan Eakins. All rights reserved. Originally published at http://nolan.eakins.net/mpme.html
