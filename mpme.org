@@ -37,12 +37,11 @@ Therefore the number of quantums around a proton to an electron should be the sa
 In QST "mass specifically denotes the presence of a localized distortion"[fn:EI] while common sense says masses have volume.
 Therefore masses are a number of quanta in a volume.
 
-Since an electron is less massive than a proton, it will be our quanta:
-$Q_{e^+} / V = 1q$.
+Since an electron is less massive than a proton, it will be our unit: 1N.
 
-** 1q
+** 1N
 
-To move spatially, a single quanta, 1q, needs to collide and displace another quanta to take its place.
+To move spatially, a single quanta, 1N, needs to collide and displace another quanta to take its place.
 This is a /tick/.
 
 \begin{equation}
@@ -58,13 +57,13 @@ A quantum for each spatial axis.
 \bsquare \to \square ^ \square _ \square
 \end{equation}
 
-** 2q
+** 2N
 
 Now it's possible for masses to coalesce into structures.
-A 2q structure is just that: twice the quantums in twice the volume with twice the surface area.
+A 2N structure is just that: twice the quantums in twice the volume with twice the surface area.
 
-Unlike 1q, 2q can not move in a single tick.
-It needs to move twice as far as 1q to move its length.
+Unlike 1N, 2N can not move in a single tick.
+It needs to move twice as far as 1N to move its length.
 This can take 2 ticks, but by time this has occurred two more ticks in the direction of motion will have been caused.
 
 \begin{equation}
@@ -72,15 +71,15 @@ This can take 2 ticks, but by time this has occurred two more ticks in the direc
 \end{equation}
 
 To move spatially, these two volumes both need to collide with a volume for each axis in the direction of motion.
-Instead of 3q, this is 6q.
-As this introduces 4 ticks, we need to take into account 4 layers of volumes like this: 6q leads to 18q and so on until 162q which is 4 ticks away.
+Instead of 3N, this is 6N.
+As this introduces 4 ticks, we need to take into account 4 layers of volumes like this: 6N leads to 18N and so on until 162N which is 4 ticks away.
 
 (todo fig)
 
-** 3q
+** 3N
 
-3q is exactly that: three times the quanta with three times the sides.
-Unlike 2q, three can take up to three ticks or sometimes two depending on their arrangement.
+3N is exactly that: three times the quanta with three times the sides.
+Unlike 2N, three can take up to three ticks or sometimes two depending on their arrangement.
 50:50 odds will be assumed for this article's approximation.
 
 \begin{equation}
@@ -91,33 +90,33 @@ Unlike 2q, three can take up to three ticks or sometimes two depending on their 
 \bsquare \bsquare \bsquare \to \square \to \square \to \square \to \square \to \square \to \square
 \end{equation}
 
-Just like 2q, there needs to be 3q for each quanta to move.
+Just like 2N, there needs to be 3N for each quanta to move.
 As more ticks are involved the number of quanta involved exponentially grows.
-Therefore this oscillation will cause up to 729q to be displaced.
+Therefore this oscillation will cause up to 729N to be displaced.
 
-For leptons greater than 1q this can be generalized as:
+For masses greater than 1N this can be generalized as:
 
-$\begin{align}
-T_{out} \cdot (Q \cdot 3^{T_{in}})^2
-\end{align}$
+$\begin{equation}
+T_{out} \cdot (N \cdot 3^{T_{in}})^2
+\end{equation}$
 
-** 4q
+** 4N
 
-And to be daring let's estimate a 4q structure such as:
+And to be daring let's estimate a 4N structure such as:
 
 \begin{equation}
 \bsquare^\bsquare_\bsquare\bsquare \to \square \to \square \to \square \to \square
 \end{equation}
 
-Using the equation from the last section and 2.5 ticks, we get 972q which need to be displaced.
+Using the equation from the last section and 2.5 ticks, we get 972N which need to be displaced.
 
 * Results
 
-As can be seen in the table, 1q needs a tick to move into 3q yielding a result of 3 in the 1q special case.
-2q needs 2 ticks to displace 9q for a result of 648,
-and 3q roughly averages 2.5 ticks to displace ~15q for a product of ~5467.
+As can be seen in the table, 1N needs a tick to move into 3N yielding a result of 3 in the 1N special case.
+2N needs 2 ticks to displace 9N for a result of 648,
+and 3N roughly averages 2.5 ticks to displace ~15N for a product of ~5467.
 
-| # of quanta | # ticks in | # ticks out | #q displaced | $T_{out}\cdot(Q\cdot3^{T_{in}})^2$ | $\frac{result}{result_{1}}$   |
+| n | # ticks in | # ticks out | #n displaced | $T_{out}\cdot(N\cdot3^{T_{in}})^2$ | $\frac{result}{result_{1}}$   |
 |-------------+------------+------------+--------------+-----------------------+-------------------------------|
 |           1 |        0.5 |          1 |    1.7320508 |             3.0000000 |                            1. |
 |           2 |          2 |          2 |            9 |                   648 |                          216. |
@@ -125,19 +124,29 @@ and 3q roughly averages 2.5 ticks to displace ~15q for a product of ~5467.
 |           4 |        2.5 |        2.5 |    15.588457 |             9719.9997 |                     3239.9999 |
 #+TBLFM: $4=3^($2)::$5=$3*($1*$4)*($1*$4)::$6=$5/@2$5
 
-Dividing those products by 1q's product the $1q:2q:3q$ ratio is $1:216:1822$.
+Dividing those products by 1N's product the $1N:2N:3N$ ratio is $1:216:1822$.
 That's extremely close to $M_{e^-}:M_\mu:M_{p^+} \to 0.511:105.7:938.3 \to 1:207:1836$.
 
-Beyond 3q, we hit a number that nears that of $M_{e^-}:M_\tau \to 0.511:1776.82 \to 1:3475$ at 4q[fn:WP-muon].
+Beyond 3N, we hit a number that nears that of $M_{e^-}:M_\tau \to 0.511:1776.82 \to 1:3475$ at 4N[fn:WP-muon].
 
-And brute forcing the number of ticks:
+And brute forcing the number of ticks in:
 
-| # of quanta | # ticks in | # ticks out | #q displaced | $T_{out}\cdot(Q\cdot3^{T_{in}})^2$ | $\frac{result}{result_{1}}$ |
-|-------------+------------+------------+--------------+------------------------------+-------------------------------|
-|           1 |        0.5 |          1 |    1.7320508 |                    3.0000000 |                            1. |
-|           2 |       1.98 |          2 |    8.8044065 |                    620.14059 |                     206.71353 |
-|           3 |      2.503 |        2.5 |    15.639919 |                    5503.6590 |                      1834.553 |
-|           4 |      2.527 |        2.5 |    16.057777 |                    10314.088 |                     3438.0293 |
+| n | # ticks in | # ticks out | #n displaced | $T_{out}\cdot(N\cdot3^{T_{in}})^2$ | $\frac{result}{result_{1}}$ |
+|---+------------+-------------+--------------+------------------------------------+-----------------------------|
+| 1 |        0.5 |           1 |    1.7320508 |                          3.0000000 |                          1. |
+| 2 |      1.981 |           2 |    8.8140844 |                          621.50467 |                   207.16822 |
+| 3 |     2.5035 |         2.5 |    15.648513 |                          5509.7091 |                   1836.5697 |
+| 4 |     2.5322 |         2.5 |    16.149774 |                          10432.608 |                    3477.536 |
+#+TBLFM: $4=3^($2)::$5=$3*($1*$4)*($1*$4)::$6=$5/@2$5
+
+Or the number of ticks out:
+
+| n | # ticks in | # ticks out | #n displaced | $T_{out}\cdot(N\cdot3^{T_{in}})^2$ | $\frac{result}{result_{1}}$ |
+|---+------------+-------------+--------------+------------------------------------+-----------------------------|
+| 1 |        0.5 |           1 |    1.7320508 |                          3.0000000 |                          1. |
+| 2 |          2 |        1.92 |            9 |                             622.08 |                      207.36 |
+| 3 |        2.5 |       2.519 |    15.588457 |                          5509.0528 |                   1836.3509 |
+| 4 |        2.5 |       2.683 |    15.588457 |                          10431.504 |                    3477.168 |
 #+TBLFM: $4=3^($2)::$5=$3*($1*$4)*($1*$4)::$6=$5/@2$5
 
 * Conclusion
@@ -147,7 +156,7 @@ And brute forcing the number of ticks:
 #+END_QUOTE
 
 These numbers are of the magnitude required to agree with the measured values of $M_{p^+}$, $M_{e^-}$, and even $M_\mu$.
-As evidenced by the average in 3q, further refinement should be possible by taking into account the actual super-spatial motions.
+As evidenced by the average in 3N, further refinement should be possible by taking into account the actual super-spatial motions.
 With this mass becomes a function of a number of volumes, their surface area, and time.
 
 [fn:EI] /Einstein's Intuition/, Thad Roberts, 2015, http://einsteinsintuition.com/
