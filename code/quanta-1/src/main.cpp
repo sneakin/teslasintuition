@@ -1,3 +1,8 @@
+/* Quanta 1 - physics simulation of colliding balls
+ * Copyright (C) 2016 Nolan Eakins
+ * All rights reserved.
+ */
+
 #include <cmath>
 #include <climits>
 #include <stdlib.h>
