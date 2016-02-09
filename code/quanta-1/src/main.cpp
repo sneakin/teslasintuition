@@ -57,6 +57,10 @@ public:
   int max() const { return _max; }
 };
 
+
+class Vec3;
+Vec3 operator* (float a, const Vec3 &v);
+
 class Vec3
 {
   float _v[4];
@@ -192,6 +196,11 @@ public:
     return *this - projectOnto(v);
   }
 
+  Vec3 reflectBy(const Vec3 &normal) const
+  {
+    return -2.0f * projectOnto(normal) + *this;
+  }
+
   Vec3 negate() const
   {
     return *this * -1;
@@ -234,6 +243,11 @@ public:
                 ::clamp(w(), max.w(), min.w()));
   }
 
+  Vec3 abs() const
+  {
+    return Vec3(fabs(x()), fabs(y()), fabs(z()), fabs(w()));
+  }
+
   static float randf()
   {
     return (std::rand() & 0xFFFFFF) / (float)0xFFFFFF;
@@ -255,6 +269,11 @@ const Vec3 Vec3::X(1, 0, 0), Vec3::Y(0, 1, 0), Vec3::Z(0, 0, 1), Vec3::W(0, 0, 0
 const Vec3 Vec3::nX(-1, 0, 0), Vec3::nY(0, -1, 0), Vec3::nZ(0, 0, -1), Vec3::nW(0, 0, 0, -1);
 
 Vec3 operator* (int a, const Vec3 &v)
+{
+  return v * a;
+}
+
+Vec3 operator* (float a, const Vec3 &v)
 {
   return v * a;
 }
@@ -655,6 +674,11 @@ namespace Colors
   {
     static const Vec3 *palette[NumColors] = { &Red, &Yellow, &Green, &Cyan, &Blue, &Magenta };
     return *palette[abs(n) % NumColors];
+  }
+
+  const Vec3 &color()
+  {
+    return color(rand());
   }
 
   Vec3 color(float n)
@@ -1844,6 +1868,7 @@ public:
   const Vec3 &velocity() const { return _velocity; }
   Quantum &setVelocity(const Vec3 &v) { _velocity = v; return *this; }
   const Vec3 &color() const { return _color; }
+  Quantum &setColor(const Vec3 &c) { _color = c; return *this; }
 
   void update(float dt)
   {
@@ -1866,6 +1891,12 @@ public:
       r.setZ(-_scale);
     } else if(r.z() < -_scale) {
       r.setZ(_scale);
+    }
+#endif
+
+#ifdef WRAPAROUND_SPHERE
+    if(r.magnitude() >= _scale) {
+      r = r.normalize() * -_scale;
     }
 #endif
     _position = r;
@@ -1936,18 +1967,29 @@ public:
 
   bool colliding(const Quantum &a, const Quantum &b) const
   {
-    return (a.position() - b.position()).magnitude() < _quantum_radius * 1.5;
+    return (a.position() - b.position()).magnitude() < _quantum_radius;
   }
 
   void collide(Quantum &a, Quantum &b, float dt)
   {
     Vec3 n = (a.position() - b.position()).normalize();
-    Vec3 va = -2 * b.velocity().projectOnto(n) + b.velocity();
-    Vec3 vb = -2 * a.velocity().projectOnto(n) + a.velocity();
+    Vec3 va = b.velocity().reflectBy(n);
+    Vec3 vb = a.velocity().reflectBy(n);
     //std::cout << a.position() << " " << b.position() << " " << n << " " << a.velocity() << " " << va << std::endl;
 
     a.setVelocity(va);
     b.setVelocity(vb);
+
+    /*
+    Vec3 ca = b.color().reflectBy(n).normalize();
+    Vec3 cb = a.color().reflectBy(n).normalize();
+    a.setColor(ca);
+    b.setColor(cb);
+    */
+    
+    Vec3 c = a.color();
+    a.setColor(b.color());
+    b.setColor(c);
 
     //Vec3 v = a.velocity();
     //a.setVelocity(b.velocity());
@@ -1974,7 +2016,7 @@ public:
       glPushMatrix(); {
         glTranslatef(q.position().x(), q.position().y(), q.position().z());
         glScalef(quanta.quantum_radius(), quanta.quantum_radius(), quanta.quantum_radius());
-        glColor3fv(q.color());
+        glColor3fv(q.color().abs());
         _icosa_ren.render(camera, _icosa);
       } glPopMatrix();
     }
@@ -1998,11 +2040,11 @@ int main(int argc, char *argv[])
 {
   unsigned int frames = 0, ms_per_frame = 0, frame_start = 0;
   int joystick_index = 0;
-  float near_plane = 32.0f, far_plane = 1024.0f * 16.0f;
+  float near_plane = 4.0f, far_plane = 1024.0f * 8.0f;
   Vec3 min_position(-2048, -2048, -2048), max_position(2048, 2048, 2048);
   Vec3 min_speed(-10, -10, -10), max_speed(10, 10, 10);
-  int num_quanta = 1024, quanta_size = 2048, generation = 0;
-  float quantum_speed;
+  int num_quanta = 1024, universe_size = 2048, generation = 0;
+  float quantum_speed = 0.0f, quantum_forward_speed = 0.0f, quantum_radius = 1.0f;
 
   if(argc > 1) {
     num_quanta = atoi(argv[1]);
@@ -2013,7 +2055,7 @@ int main(int argc, char *argv[])
     max_position = Vec3(n, n, n);
   }
   if(argc > 3) {
-    quanta_size = atof(argv[3]);;
+    universe_size = atof(argv[3]);;
   }
   if(argc > 4) {
     float n = atof(argv[4]);
@@ -2108,12 +2150,12 @@ int main(int argc, char *argv[])
   Camera *camera = &fps_camera;
   Camera *view_camera = camera;
 
-  Quanta quanta(4.0f);
+  Quanta quanta(quantum_radius);
 /*
   for(int i = 0; i < num_quanta; i++) {
     quanta.push_back(Quantum(Vec3::random(min_position, max_position),
                              Vec3::random(min_speed, max_speed),
-                             quanta_size,
+                             universe_size,
                              Colors::color(i)));
   }
 */
@@ -2164,7 +2206,7 @@ int main(int argc, char *argv[])
 
   glEnable(GL_LIGHT0);
 
-  float speed = 2048.0f;
+  float speed = 16.0f;
   float droll = 0.0f, dpitch = 0.0f, dyaw = 0.0f;
 
   //Vec3 joy_sensitivity(50, 50, 150);
@@ -2287,7 +2329,7 @@ int main(int argc, char *argv[])
           break;
         case SDL_SCANCODE_RETURN:
           if(event.type == SDL_KEYDOWN) {
-            quanta.push_back(Quantum(camera->position(), camera->forward() * quantum_speed, quanta_size, Colors::White));
+            quanta.push_back(Quantum(camera->forward() * near_plane * 2.0f + camera->position(), camera->forward() * quantum_speed, universe_size, Colors::color()));
           }
           break;
         case SDL_SCANCODE_EQUALS:
@@ -2314,13 +2356,25 @@ int main(int argc, char *argv[])
             std::cout << "Number of quanta increased to " << num_quanta << std::endl;
           }
           break;
+        case SDL_SCANCODE_P:
+          if(event.type == SDL_KEYDOWN) {
+            quantum_forward_speed += 0.25f;
+            std::cout << "Quantum forward speed: " << quantum_forward_speed << std::endl;
+          }
+          break;
+        case SDL_SCANCODE_O:
+          if(event.type == SDL_KEYDOWN) {
+            quantum_forward_speed -= 0.25f;
+            std::cout << "Quantum forward speed: " << quantum_forward_speed << std::endl;
+          }
+          break;
         case SDL_SCANCODE_APOSTROPHE:
           if(event.type == SDL_KEYDOWN) {
             Vec3 color = Colors::color(generation++);
             for(int i = 0; i < num_quanta; i++) {
-              quanta.push_back(Quantum(camera->position() + Vec3::random(min_position, max_position),
-                                       quantum_speed * Vec3::random(min_speed, max_speed).normalize(),
-                                       quanta_size,
+              quanta.push_back(Quantum(camera->forward() * near_plane * 2.0f + camera->position() + Vec3::random(min_position, max_position),
+                                       quantum_forward_speed * camera->forward() + quantum_speed * Vec3::random(min_speed, max_speed).normalize(),
+                                       universe_size,
                                        color));
             }
           }
