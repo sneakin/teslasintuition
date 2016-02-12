@@ -1965,8 +1965,8 @@ public:
 
     for(int i = 0; i < size(); i++) {
       for(int j = 0; j < size(); j++) {
-        if(i != j && seen[i][j] != true && seen[j][i] != true && colliding(_quanta[i], _quanta[j])) {
-          collide(_quanta[i], _quanta[j], dt);
+        if(i != j && seen[i][j] != true && seen[j][i] != true && colliding((*this)[i], (*this)[j])) {
+          collide((*this)[i], (*this)[j], dt);
         }
         seen[i][j] = true;
         seen[j][i] = true;
@@ -2045,6 +2045,16 @@ public:
   QuantaRenderer(Renderer &renderer)
     : _icosa(1.0f), _icosa_ren(renderer), _renderer(renderer)
   {
+  }
+
+  void render(const Camera &camera, const Quantum &quantum, float radius, float alpha = 1.0f)
+  {
+     glPushMatrix();
+     glTranslatef(quantum.position().x(), quantum.position().y(), quantum.position().z());
+     glScalef(radius, radius, radius);
+     glColor3fv(quantum.color().abs() * Vec3(1.0f, 1.0f, 1.0f, alpha));
+     _icosa_ren.render(camera, _icosa);
+     glPopMatrix();
   }
 
   void render(const Camera &camera, const Quanta &quanta)
@@ -2376,7 +2386,7 @@ int main(int argc, char *argv[])
           break;
         case SDL_SCANCODE_RETURN:
           if(event.type == SDL_KEYDOWN) {
-            quanta.push_back(Quantum(camera->forward() * near_plane * 2.0f + camera->position(), camera->forward() * quantum_speed, universe_size, Colors::color()));
+            quanta.push_back(new Quantum(camera->forward() * near_plane * 2.0f + camera->position(), camera->forward() * quantum_speed, universe_size, Colors::color()));
           }
           break;
         case SDL_SCANCODE_EQUALS:
@@ -2419,10 +2429,27 @@ int main(int argc, char *argv[])
           if(event.type == SDL_KEYDOWN) {
             Vec3 color = Colors::color(generation++);
             for(int i = 0; i < num_quanta; i++) {
-              quanta.push_back(Quantum(camera->forward() * near_plane * 2.0f + camera->position() + Vec3::random(min_position, max_position),
+              quanta.push_back(new Quantum(camera->forward() * near_plane * 2.0f + camera->position() + Vec3::random(min_position, max_position),
                                        quantum_forward_speed * camera->forward() + quantum_speed * Vec3::random(min_speed, max_speed).normalize(),
                                        universe_size,
                                        color));
+            }
+          }
+          break;
+        case SDL_SCANCODE_L:
+          if(event.type == SDL_KEYDOWN) {
+            Vec3 color = Colors::color(generation++);
+            float d = (max_position - min_position).magnitude();
+            float maxq = powf(num_quanta, 1.0f/3.0f);
+            for(int x = 0; x < maxq; x++) {
+              for(int y = 0; y < maxq; y++) {
+                for(int z = 0; z < maxq; z++) {
+                  quanta.push_back(new Quantum(camera->forward() * near_plane * 2.0f + camera->position() + (Vec3(x, y, z) / maxq * d - d / 2),
+                                               quantum_forward_speed * camera->forward() + quantum_speed * Vec3::random(min_speed, max_speed).normalize(),
+                                               universe_size,
+                                               color));
+                }
+              }
             }
           }
           break;
