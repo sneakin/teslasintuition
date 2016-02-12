@@ -1870,7 +1870,9 @@ public:
   const Vec3 &color() const { return _color; }
   Quantum &setColor(const Vec3 &c) { _color = c; return *this; }
 
-  void update(float dt)
+  float universeSize() const { return _scale; }
+
+  virtual void update(float dt)
   {
     Vec3 r = (_position + _velocity * dt);
 
@@ -1905,35 +1907,51 @@ public:
 
 class Quanta
 {
-  typedef std::vector<Quantum> vector;
+  typedef std::vector<Quantum *> vector;
   vector _quanta;
   float _quantum_radius;
+  bool _swap_color;
 
 public:
   Quanta(float quantum_radius)
-    : _quantum_radius(quantum_radius)
+    : _quantum_radius(quantum_radius), _swap_color(false)
   {
   }
 
-  void push_back(Quantum q)
+  virtual ~Quanta()
+  {
+    for(int i = 0; i < _quanta.size(); i++) {
+      delete _quanta[i];
+    }
+  }
+
+  void push_back(Quantum *q)
   {
     _quanta.push_back(q);
   }
 
   Quantum &operator[] (int n)
   {
-    return _quanta[n];
+    return *_quanta[n];
   }
 
   const Quantum &operator[] (int n) const
   {
-    return _quanta[n];
+    return *_quanta[n];
   }
 
   int size() const { return _quanta.size(); }
   float quantum_radius() const { return _quantum_radius; }
 
-  void update(float dt)
+  bool swapColor() const {
+    return _swap_color;
+  }
+
+  bool swapColor(bool yes) {
+    return _swap_color = yes;
+  }
+
+  virtual void update(float dt)
   {
     bool **seen = new bool*[size()];
 
@@ -1956,25 +1974,43 @@ public:
     }
 
     for(int i = 0; i < size(); i++) {
-      _quanta[i].update(dt);
-    }
-
-    for(int i = 0; i < size(); i++) {
        delete[] seen[i];
     }
     delete[] seen;
+
+    for(int i = 0; i < size(); i++) {
+      (*this)[i].update(dt);
+    }
   }
 
   bool colliding(const Quantum &a, const Quantum &b) const
   {
-    return (a.position() - b.position()).magnitude() < _quantum_radius;
+    return ((a.position() - b.position()).magnitude()) < (_quantum_radius * 2.0f);
   }
 
   void collide(Quantum &a, Quantum &b, float dt)
   {
     Vec3 n = (a.position() - b.position()).normalize();
-    Vec3 va = b.velocity().reflectBy(n);
-    Vec3 vb = a.velocity().reflectBy(n);
+    if(n.isNaN()) {
+      n = ((a.position() - a.velocity()) - (b.position() - b.velocity())).normalize();
+    }
+    Vec3 va = (b.velocity()).reflectBy(n);
+    if(va.isNaN()) va = Vec3();
+    Vec3 vb = (a.velocity()).reflectBy(n);
+    if(vb.isNaN()) vb = Vec3();
+
+#ifdef NEGATE_REFLECTION
+    va = -va;
+    vb = -vb;
+#endif
+
+    float ei = (a.velocity() + b.velocity()).magnitude();
+    ei = ei * ei;
+    float ef = (va + vb).magnitude();
+    ef = ef * ef;
+    assert((ef - ei) < 0.1f);
+    assert((vb.magnitude() - a.velocity().magnitude()) < 0.1f);
+    assert((va.magnitude() - b.velocity().magnitude()) < 0.1f);
     //std::cout << a.position() << " " << b.position() << " " << n << " " << a.velocity() << " " << va << std::endl;
 
     a.setVelocity(va);
@@ -1986,10 +2022,12 @@ public:
     a.setColor(ca);
     b.setColor(cb);
     */
-    
-    Vec3 c = a.color();
-    a.setColor(b.color());
-    b.setColor(c);
+
+    if(_swap_color) {
+      Vec3 c = a.color();
+      a.setColor(b.color());
+      b.setColor(c);
+    }
 
     //Vec3 v = a.velocity();
     //a.setVelocity(b.velocity());
@@ -2284,6 +2322,15 @@ int main(int argc, char *argv[])
               delete view_camera;
               view_camera = camera;
               std::cout << "Camera coupled" << std::endl;
+            }
+          }
+          break;
+        case SDL_SCANCODE_F6:
+          if(event.type == SDL_KEYDOWN) {
+            if(quanta.swapColor(!quanta.swapColor())) {
+              std::cout << "Swapping colors on collision." << std::endl;
+            } else {
+              std::cout << "Not swapping colors on collision." << std::endl;
             }
           }
           break;
