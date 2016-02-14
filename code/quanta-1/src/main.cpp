@@ -57,6 +57,8 @@ public:
   int max() const { return _max; }
 };
 
+using std::isnan;
+using std::isinf;
 
 class Vec3;
 Vec3 operator* (float a, const Vec3 &v);
