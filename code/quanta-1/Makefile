@@ -1,3 +1,7 @@
+ifeq ($(shell uname), Darwin)
+  MAC=1
+endif
+
 ifdef MAC
 CXX=/opt/local/bin/g++-mp-4.5
 LDFLAGS+=/opt/local/lib/libstdc++.6.dylib

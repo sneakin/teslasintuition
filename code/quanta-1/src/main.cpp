@@ -57,6 +57,10 @@ public:
   int max() const { return _max; }
 };
 
+#ifdef MAC
+using std::isnan;
+using std::isinf;
+#endif
 
 class Vec3;
 Vec3 operator* (float a, const Vec3 &v);
