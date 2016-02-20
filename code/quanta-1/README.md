@@ -31,10 +31,10 @@ Build flags
 
 Make accepts a few options that control the simulation:
 
-  * RELEASE		Optimizes the code with -O3
-  * WRAPAROUND_CUBE	Cubed universe
-  * WRAPAROUND_SPHERE	Spherical universe
-  * 
+  * RELEASE=1		Optimizes the code with -O3
+  * WRAPAROUND=CUBE	Cubed universe
+  * WRAPAROUND=SPHERE	Spherical universe
+
 
 Usage
 ===

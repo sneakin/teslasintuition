@@ -1880,7 +1880,7 @@ public:
   {
     Vec3 r = (_position + _velocity * dt);
 
-#ifdef WRAPAROUND
+#if defined(WRAPAROUND_CUBE)
     if(r.x() > _scale) {
       r.setX(-_scale);
     } else if(r.x() < -_scale) {
@@ -1898,13 +1898,12 @@ public:
     } else if(r.z() < -_scale) {
       r.setZ(_scale);
     }
-#endif
-
-#ifdef WRAPAROUND_SPHERE
+#elif defined(WRAPAROUND_SPHERE)
     if(r.magnitude() >= _scale) {
       r = r.normalize() * -_scale;
     }
 #endif
+
     _position = r;
   }
 };
