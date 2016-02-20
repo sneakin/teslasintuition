@@ -1993,6 +1993,7 @@ public:
 
   void collide(Quantum &a, Quantum &b, float dt)
   {
+#ifdef BAD_MATH
     Vec3 n = (a.position() - b.position()).normalize();
     if(n.isNaN()) {
       n = ((a.position() - a.velocity()) - (b.position() - b.velocity())).normalize();
@@ -2015,6 +2016,13 @@ public:
     assert((vb.magnitude() - a.velocity().magnitude()) < 0.1f);
     assert((va.magnitude() - b.velocity().magnitude()) < 0.1f);
     //std::cout << a.position() << " " << b.position() << " " << n << " " << a.velocity() << " " << va << std::endl;
+#else
+    Vec3 n = a.position() - b.position();
+    Vec3 na = a.velocity().projectOnto(n);
+    Vec3 nb = b.velocity().projectOnto(n);
+    Vec3 va = (a.velocity() - na) + nb;
+    Vec3 vb = (b.velocity() - nb) + na;
+#endif /* BAD_MATH */
 
     a.setVelocity(va);
     b.setVelocity(vb);
