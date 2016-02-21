@@ -2018,10 +2018,15 @@ public:
     //std::cout << a.position() << " " << b.position() << " " << n << " " << a.velocity() << " " << va << std::endl;
 #else
     Vec3 n = a.position() - b.position();
+    if(n.isNaN()) {
+      n = ((a.position() - a.velocity()) - (b.position() - b.velocity())).normalize();
+    }
     Vec3 na = a.velocity().projectOnto(n);
     Vec3 nb = b.velocity().projectOnto(n);
     Vec3 va = (a.velocity() - na) + nb;
+    if(va.isNaN()) va = Vec3();
     Vec3 vb = (b.velocity() - nb) + na;
+    if(vb.isNaN()) vb = Vec3();
 #endif /* BAD_MATH */
 
     a.setVelocity(va);
