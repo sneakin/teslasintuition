@@ -2284,6 +2284,8 @@ int main(int argc, char *argv[])
     while(SDL_PollEvent(&event)) {
       switch(event.type) {
       case SDL_QUIT:
+        done = true;
+        break;
       case SDL_KEYDOWN:
       case SDL_KEYUP:
         switch(event.key.keysym.scancode) {
