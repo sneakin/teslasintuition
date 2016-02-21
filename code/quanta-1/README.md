@@ -50,6 +50,9 @@ Keys
   * L			Create uniform singularity
   * O, P		Give singularity forward velocity
   * F6			Swap colors on collision
+  * F7			Take a screenshot and save to current directory
+  * Alt+F7		Toggle continuous screenshooting
+
 
 Command line Arguments
 ---

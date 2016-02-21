@@ -22,6 +22,7 @@
 #include <assert.h>
 #include <stdexcept>
 #include <functional>
+#include <unistd.h>
 
 #include "math-fun.hpp"
 
@@ -2095,6 +2096,135 @@ public:
   }
 };
 
+class ScreenShooter
+{
+  int _window_width, _window_height, _bpp, _shots;
+  unsigned char *_buffer;
+  pid_t _pid;
+
+  enum Mode
+  {
+    OFF,
+    SINGLE,
+    MOVIE,
+    UNKNOWN
+  };
+
+  Mode _mode;
+
+public:
+  class Error
+  {
+    public:
+      const ScreenShooter &shooter;
+
+      Error(const ScreenShooter &s)
+        : shooter(s)
+      {
+      }
+  };
+
+  ScreenShooter(int w, int h)
+    : _buffer(NULL), _bpp(3), _shots(0), _mode(OFF)
+  {
+    _pid = getpid();
+    setWindowSize(w, h);
+  }
+
+  ~ScreenShooter()
+  {
+    if(_buffer != NULL) delete[] _buffer;
+  }
+
+  void setWindowSize(int w, int h)
+  {
+    _window_width = w;
+    _window_height = h;
+    if(_buffer != NULL) {
+      delete[] _buffer;
+    }
+    _buffer = new unsigned char[_bpp * w * h];
+  }
+
+  void prepForShot()
+  {
+    _mode = SINGLE;
+  }
+
+  void prepForMovie()
+  {
+    _mode = MOVIE;
+  }
+
+  void toggleMovie()
+  {
+    if(_mode == MOVIE) {
+      _mode = OFF;
+    } else {
+      _mode = MOVIE;
+    }
+  }
+
+  void takeScreenShot()
+  {
+    switch(_mode) {
+      case SINGLE:
+        _mode = OFF;
+        // move to next case
+      case MOVIE:
+        doScreenShot();
+      default:
+        break;
+    }
+  }
+
+private:
+  void doScreenShot()
+  {
+    // read the pixels to a buffer
+    glReadPixels(0, 0, _window_width, _window_height, GL_RGB, GL_UNSIGNED_BYTE, _buffer);
+    ASSERT_GL_ERROR;
+    mirrorBuffer();
+
+    // convert the buffer to an image format
+    SDL_Surface *surf = SDL_CreateRGBSurfaceFrom(_buffer, _window_width, _window_height, _bpp*8, _window_width * _bpp, 0xFF, 0xFF00, 0xFF0000, 0);
+    if(surf == NULL) {
+      throw Error(*this);
+    }
+
+    auto path = nextShotPath();
+    if(SDL_SaveBMP(surf, path.c_str()) == 0) {
+      std::cerr << "Screenshot " << path << " saved." << std::endl;
+    } else {
+      std::cerr << "Error saving screenshot " << path << std::endl;
+      throw Error(*this);
+    }
+
+    SDL_FreeSurface(surf);
+
+    _shots++;
+  }
+
+  void mirrorBuffer()
+  {
+    const int pitch = _window_width * _bpp;
+    unsigned char _line[pitch];
+
+    for(int y = 0; y < _window_height / 2; y++ ) {
+      unsigned char *top = &_buffer[y * pitch], *bottom = &_buffer[(_window_height - y) * pitch];
+      memcpy(_line, top, pitch);
+      memcpy(top, bottom, pitch);
+      memcpy(bottom, _line, pitch);
+    }
+  }
+
+  std::string nextShotPath()
+  {
+    // compute a path to save a single shot $PWD/quanta-$PID-$FRAME.(png|bmp)
+    return std::string("quanta-" + std::to_string((unsigned int)_pid) + "-" + std::to_string(_shots) + ".bmp");
+  }
+};
+
 int window_width = APP_WIDTH, window_height = APP_HEIGHT;
 
 using std::cout;
@@ -2277,6 +2407,8 @@ int main(int argc, char *argv[])
   Vec3 joy_sensitivity(0.8, 0.8, 0.25);
   float joy_pitch = NAN, joy_yaw = NAN, joy_roll = NAN;
 
+  ScreenShooter screen_shooter(window_width, window_height);
+
   while(!done) {
     frame_start = SDL_GetTicks();
     droll = dpitch = dyaw = 0.0f;
@@ -2291,6 +2423,15 @@ int main(int argc, char *argv[])
         switch(event.key.keysym.scancode) {
         case SDL_SCANCODE_ESCAPE:
           done = true;
+          break;
+        case SDL_SCANCODE_F7:
+          if(event.type == SDL_KEYDOWN) {
+            if(SDL_GetModState() & KMOD_ALT) {
+              screen_shooter.toggleMovie();
+            } else {
+              screen_shooter.prepForShot();
+            }
+          }
           break;
         case SDL_SCANCODE_UP:
         case SDL_SCANCODE_W:
@@ -2479,6 +2620,7 @@ int main(int argc, char *argv[])
           window_width = event.window.data1;
           window_height = event.window.data2;
           glViewport(0, 0, window_width, window_height);
+          screen_shooter.setWindowSize(window_width, window_height);
           break;
         }
         break;
@@ -2650,6 +2792,8 @@ int main(int argc, char *argv[])
 
     SDL_GL_SwapWindow(window);
     ASSERT_GL_ERROR;
+
+    screen_shooter.takeScreenShot();
 
     frames++;
     ms_per_frame = SDL_GetTicks() - frame_start;
