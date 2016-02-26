@@ -1957,81 +1957,78 @@ public:
 
   virtual void update(float dt)
   {
-    bool **seen = new bool*[size()];
-
+    bool *seen = new bool[size()];
     for(int i = 0; i < size(); i++) {
-      seen[i] = new bool[size()];
-
-      for(int j = 0; j < size(); j++) {
-         seen[i][j] = false;
-      }
+      seen[i] = false;
     }
 
     for(int i = 0; i < size(); i++) {
       for(int j = 0; j < size(); j++) {
-        if(i != j && seen[i][j] != true && seen[j][i] != true && colliding((*this)[i], (*this)[j])) {
-          collide((*this)[i], (*this)[j], dt);
+        if(i != j && seen[i] != true && seen[j] != true && collide((*this)[i], (*this)[j], dt)) {
+          seen[i] = true;
+          seen[j] = true;
         }
-        seen[i][j] = true;
-        seen[j][i] = true;
+      }
+      if(!seen[i]) {
+        (*this)[i].update(dt);
+        seen[i] = true;
       }
     }
 
-    for(int i = 0; i < size(); i++) {
-       delete[] seen[i];
-    }
     delete[] seen;
-
-    for(int i = 0; i < size(); i++) {
-      (*this)[i].update(dt);
-    }
   }
 
-  bool colliding(const Quantum &a, const Quantum &b) const
+  bool colliding(const Quantum &a, const Quantum &b, float dt) const
   {
     return ((a.position() - b.position()).magnitude()) < (_quantum_radius * 2.0f);
   }
 
-  void collide(Quantum &a, Quantum &b, float dt)
+  bool collide(Quantum &a, Quantum &b, float dt)
   {
-#ifdef BAD_MATH
-    Vec3 n = (a.position() - b.position()).normalize();
-    if(n.isNaN()) {
-      n = ((a.position() - a.velocity()) - (b.position() - b.velocity())).normalize();
-    }
-    Vec3 va = (b.velocity()).reflectBy(n);
-    if(va.isNaN()) va = Vec3();
-    Vec3 vb = (a.velocity()).reflectBy(n);
-    if(vb.isNaN()) vb = Vec3();
+// av^2 t^2 + 2*av*ax*t - 2*av*bv*t^2 - 2 * av*bx*t + ax^2 - 2*ax*bv*t - 2*ax*bx + bv^2 * t^2 + 2*bv *bx*t + bx^2
+// av^2 t^2 - 2*av*bv*t^2 + bv^2 * t^2 - 2 * av*bx*t - 2*ax*bv*t + 2*bv *bx*t + 2*av*ax*t + ax^2 + bx^2  - 2*ax*bx
+// t^2(av^2 - 2*av*bv + bv^2) + t(-2 * av*bx* - 2*ax*bv* + 2*bv *bx* + 2*av*ax) + (ax^2 + bx^2  - 2*ax*bx)
 
-#ifdef NEGATE_REFLECTION
-    va = -va;
-    vb = -vb;
-#endif
+    Vec3 iv = a.position() * a.position() - 2.0f * a.position() * b.position() + b.position() * b.position();
+    Vec3 jv = 2.0f*a.position() * a.velocity() - 2.0f * a.position() * b.velocity() - 2.0f * b.position() * a.velocity() + 2.0f * b.position() * b.velocity();
+    Vec3 kv = a.velocity() * a.velocity() - 2.0f * a.velocity() * b.velocity() + b.velocity() * b.velocity();
 
-    float ei = (a.velocity() + b.velocity()).magnitude();
-    ei = ei * ei;
-    float ef = (va + vb).magnitude();
-    ef = ef * ef;
-    assert((ef - ei) < 0.1f);
-    assert((vb.magnitude() - a.velocity().magnitude()) < 0.1f);
-    assert((va.magnitude() - b.velocity().magnitude()) < 0.1f);
-    //std::cout << a.position() << " " << b.position() << " " << n << " " << a.velocity() << " " << va << std::endl;
-#else
-    Vec3 n = a.position() - b.position();
-    if(n.isNaN()) {
-      n = ((a.position() - a.velocity()) - (b.position() - b.velocity())).normalize();
+    float i = -4.0f * _quantum_radius * _quantum_radius + iv.x() + iv.y() + iv.z();
+    float j = jv.x() + jv.y() + jv.z();
+    float k = kv.x() + kv.y() + kv.z();
+
+    float tp = (-j + sqrt(j*j - 4.0*i*k)) / (2.0*k);
+    float tm = (-j - sqrt(j*j - 4.0*i*k)) / (2.0*k);
+
+    if((isnan(tp) || tp < 0.0f || tp > dt) && (isnan(tm) || tm < 0.0f || tm > dt)) {
+      //std::cerr << "No collision between " << a.position() << ":" << a.velocity() << " and " << b.position() << ":" << b.velocity() << "? " << tp << " " << tm << "\t" << (a.position() - b.position()).magnitude() << std::endl;
+      return false;
     }
+
+    float t = FP_NAN;
+
+    if(tp < tm && !isnan(tp) && tp >= 0.0f && tp <= dt) {
+      t = tp;
+    } else {
+      t = tm;
+    }
+
+    Vec3 ac = a.position() + a.velocity() * t;
+    Vec3 bc = b.position() + b.velocity() * t;
+
+    //std::cerr << a.position() << ":" << a.velocity() << " and " << b.position() << ":" << b.velocity() << " " << "\t" << tp << " " << tm << "\t" << ac << " " << bc << "\t" << (ac - bc).magnitude() << std::endl;
+
+    Vec3 n = ac - bc;
     Vec3 na = a.velocity().projectOnto(n);
     Vec3 nb = b.velocity().projectOnto(n);
     Vec3 va = (a.velocity() - na) + nb;
-    if(va.isNaN()) va = Vec3();
     Vec3 vb = (b.velocity() - nb) + na;
-    if(vb.isNaN()) vb = Vec3();
-#endif /* BAD_MATH */
+    if(va.isNaN() || vb.isNaN()) return false;
 
     a.setVelocity(va);
+    a.setPosition(ac + va * (dt - t));
     b.setVelocity(vb);
+    b.setPosition(bc + vb * (dt - t));
 
     /*
     Vec3 ca = b.color().reflectBy(n).normalize();
@@ -2046,9 +2043,7 @@ public:
       b.setColor(c);
     }
 
-    //Vec3 v = a.velocity();
-    //a.setVelocity(b.velocity());
-    //b.setVelocity(v);
+    return true;
   }
 };
 
