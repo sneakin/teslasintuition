@@ -2545,13 +2545,13 @@ int main(int argc, char *argv[])
           break;
         case SDL_SCANCODE_EQUALS:
           if(event.type == SDL_KEYDOWN) {
-            quantum_speed += 0.25f;
+            quantum_speed += 0.1f;
             std::cout << "Quantum speed: " << quantum_speed << std::endl;
           }
           break;
         case SDL_SCANCODE_MINUS:
           if(event.type == SDL_KEYDOWN) {
-            quantum_speed -= 0.25f;
+            quantum_speed -= 0.1f;
             std::cout << "Quantum speed: " << quantum_speed << std::endl;
           }
           break;
@@ -2569,13 +2569,13 @@ int main(int argc, char *argv[])
           break;
         case SDL_SCANCODE_P:
           if(event.type == SDL_KEYDOWN) {
-            quantum_forward_speed += 0.25f;
+            quantum_forward_speed += 0.1f;
             std::cout << "Quantum forward speed: " << quantum_forward_speed << std::endl;
           }
           break;
         case SDL_SCANCODE_O:
           if(event.type == SDL_KEYDOWN) {
-            quantum_forward_speed -= 0.25f;
+            quantum_forward_speed -= 0.1f;
             std::cout << "Quantum forward speed: " << quantum_forward_speed << std::endl;
           }
           break;
@@ -2632,10 +2632,35 @@ int main(int argc, char *argv[])
         break;
       case SDL_MOUSEBUTTONDOWN:
         //SDL_SetWindowGrab();
-        SDL_SetRelativeMouseMode((SDL_bool)true);
+        switch(event.button.button) {
+          case SDL_BUTTON_LEFT:
+            if(event.button.clicks == 1) {
+              quanta.push_back(new Quantum(camera->forward() * near_plane * 2.0f + camera->position(), camera->forward() * quantum_speed, universe_size, Colors::color()));
+            }
+            break;
+          case SDL_BUTTON_RIGHT:
+            SDL_SetRelativeMouseMode((SDL_bool)true);
+            break;
+          default:
+            std::cerr << "Unknown button: " << event.button.button << std::endl;
+            break;
+         }
         break;
       case SDL_MOUSEBUTTONUP:
-        SDL_SetRelativeMouseMode((SDL_bool)false);
+        switch(event.button.button) {
+          case SDL_BUTTON_RIGHT:
+            SDL_SetRelativeMouseMode((SDL_bool)false);
+            break;
+        }
+        break;
+      case SDL_MOUSEWHEEL:
+        if(event.wheel.y > 0) {
+          quantum_speed += 0.1f;
+          std::cout << "Quantum speed: " << quantum_speed << std::endl;
+        } else if(event.wheel.y < 0) {
+          quantum_speed -= 0.1f;
+          std::cout << "Quantum speed: " << quantum_speed << std::endl;
+        }
         break;
       case SDL_JOYAXISMOTION:
         //std::cout << "JoyAxisMotion: " << event.jaxis.which << "\t" << (int)event.jaxis.axis << "\t" << event.jaxis.value << std::endl;
