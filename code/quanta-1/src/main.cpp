@@ -1962,14 +1962,32 @@ public:
       seen[i] = false;
     }
 
+    // test for collisions
     for(int i = 0; i < size(); i++) {
+      float t = NAN;
+      int q_n = -1;
+
+      // find the nearest collider
       for(int j = 0; j < size(); j++) {
-        if(i != j && seen[i] != true && seen[j] != true && collide((*this)[i], (*this)[j], dt)) {
-          seen[i] = true;
-          seen[j] = true;
+        if(i != j && seen[i] != true && seen[j] != true) {
+          float jt = collidesAt((*this)[i], (*this)[j], dt);
+          if(!isnan(jt)) {
+            if(jt < t || isnan(t)) {
+              t = jt;
+              q_n = j;
+            }
+          }
         }
       }
-      if(!seen[i]) {
+
+      // update position and velocity
+      if(q_n >= 0) {
+        collide((*this)[i], (*this)[q_n], t, dt);
+        seen[i] = true;
+        seen[q_n] = true;
+
+        // TODO collide with any other colliders, not just the nearest
+      } else {
         (*this)[i].update(dt);
         seen[i] = true;
       }
@@ -1978,45 +1996,58 @@ public:
     delete[] seen;
   }
 
-  bool colliding(const Quantum &a, const Quantum &b, float dt) const
+  float collidesAt(const Quantum &a, const Quantum &b, float dt)
   {
-    return ((a.position() - b.position()).magnitude()) < (_quantum_radius * 2.0f);
-  }
+    Vec3 dp = (a.position() - b.position());
+    float dist = dp.magnitude();
+    Vec3 dv = (a.velocity() - b.velocity());
+    float rel_speed = dv.magnitude();
 
-  bool collide(Quantum &a, Quantum &b, float dt)
-  {
-// av^2 t^2 + 2*av*ax*t - 2*av*bv*t^2 - 2 * av*bx*t + ax^2 - 2*ax*bv*t - 2*ax*bx + bv^2 * t^2 + 2*bv *bx*t + bx^2
-// av^2 t^2 - 2*av*bv*t^2 + bv^2 * t^2 - 2 * av*bx*t - 2*ax*bv*t + 2*bv *bx*t + 2*av*ax*t + ax^2 + bx^2  - 2*ax*bx
-// t^2(av^2 - 2*av*bv + bv^2) + t(-2 * av*bx* - 2*ax*bv* + 2*bv *bx* + 2*av*ax) + (ax^2 + bx^2  - 2*ax*bx)
+    // quick escapes
+    if((dp / dist).dot(dv / rel_speed) > 0.0f ||
+       (dist - 2.0f*_quantum_radius) > rel_speed) {
+      //std::cerr << "No collision between " << a.position() << ":" << a.velocity() << " and " << b.position() << ":" << b.velocity() << "? " << (dp / dist).dot(dv / rel_speed) << "\t" << (a.position() - b.position()).magnitude() << std::endl;
+      return NAN;
+    }
+
+    // Thanks Qalculate!
+    // av^2 t^2 + 2*av*ax*t - 2*av*bv*t^2 - 2 * av*bx*t + ax^2 - 2*ax*bv*t - 2*ax*bx + bv^2 * t^2 + 2*bv *bx*t + bx^2
+    // av^2 t^2 - 2*av*bv*t^2 + bv^2 * t^2 - 2 * av*bx*t - 2*ax*bv*t + 2*bv *bx*t + 2*av*ax*t + ax^2 + bx^2  - 2*ax*bx
+    // t^2(av^2 - 2*av*bv + bv^2) + t(-2 * av*bx* - 2*ax*bv* + 2*bv *bx* + 2*av*ax) + (ax^2 + bx^2  - 2*ax*bx)
 
     Vec3 iv = a.position() * a.position() - 2.0f * a.position() * b.position() + b.position() * b.position();
     Vec3 jv = 2.0f*a.position() * a.velocity() - 2.0f * a.position() * b.velocity() - 2.0f * b.position() * a.velocity() + 2.0f * b.position() * b.velocity();
     Vec3 kv = a.velocity() * a.velocity() - 2.0f * a.velocity() * b.velocity() + b.velocity() * b.velocity();
 
+    // All that was for a distance squared formula, so add the components up.
     float i = -4.0f * _quantum_radius * _quantum_radius + iv.x() + iv.y() + iv.z();
     float j = jv.x() + jv.y() + jv.z();
     float k = kv.x() + kv.y() + kv.z();
 
-    float tp = (-j + sqrt(j*j - 4.0*i*k)) / (2.0*k);
-    float tm = (-j - sqrt(j*j - 4.0*i*k)) / (2.0*k);
+    // quadratic equation
+    float bac = j*j - 4.0*i*k;
+    if(bac < 0.0f) {
+      return NAN;
+    }
 
+    float tp = (-j + sqrt(bac)) / (2.0*k);
+    float tm = (-j - sqrt(bac)) / (2.0*k);
+
+    // pick the t
     if((isnan(tp) || tp < 0.0f || tp > dt) && (isnan(tm) || tm < 0.0f || tm > dt)) {
-      //std::cerr << "No collision between " << a.position() << ":" << a.velocity() << " and " << b.position() << ":" << b.velocity() << "? " << tp << " " << tm << "\t" << (a.position() - b.position()).magnitude() << std::endl;
-      return false;
+      //std::cerr << "No collision between " << a.position() << ":" << a.velocity() << " and " << b.position() << ":" << b.velocity() << "? " << tp << " " << tm << minimum(tp, tm) << "\t" << (a.position() - b.position()).magnitude() << std::endl;
+      return NAN;
     }
 
-    float t = FP_NAN;
+    //std::cerr << a.position() << ":" << a.velocity() << " and " << b.position() << ":" << b.velocity() << " " << "\t" << minimum(tp, tm) << "\t" << (a.position() - b.position()).magnitude() << std::endl;
 
-    if(tp < tm && !isnan(tp) && tp >= 0.0f && tp <= dt) {
-      t = tp;
-    } else {
-      t = tm;
-    }
+    return minimum(tp, tm);
+  }
 
+  bool collide(Quantum &a, Quantum &b, float t, float dt)
+  {
     Vec3 ac = a.position() + a.velocity() * t;
     Vec3 bc = b.position() + b.velocity() * t;
-
-    //std::cerr << a.position() << ":" << a.velocity() << " and " << b.position() << ":" << b.velocity() << " " << "\t" << tp << " " << tm << "\t" << ac << " " << bc << "\t" << (ac - bc).magnitude() << std::endl;
 
     Vec3 n = ac - bc;
     Vec3 na = a.velocity().projectOnto(n);

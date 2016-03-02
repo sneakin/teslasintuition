@@ -31,4 +31,14 @@ float signed_ceil(float v)
   }
 }
 
+template<typename A>
+const A &minimum(const A &a, const A &b)
+{
+  if(a < b) {
+    return a;
+  } else {
+    return b;
+  }
+}
+
 #endif /* _MATH_FUN_HPP */
