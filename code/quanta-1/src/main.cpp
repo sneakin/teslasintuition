@@ -2233,7 +2233,7 @@ int main(int argc, char *argv[])
   Vec3 min_position(-2048, -2048, -2048), max_position(2048, 2048, 2048);
   Vec3 min_speed(-10, -10, -10), max_speed(10, 10, 10);
   int num_quanta = 1024, universe_size = 2048, generation = 0;
-  float quantum_speed = 0.0f, quantum_forward_speed = 0.0f, quantum_radius = 1.0f;
+  float quantum_speed = 0.0f, quantum_forward_speed = 0.0f, quantum_radius = 0.5f;
 
   if(argc > 1) {
     num_quanta = atoi(argv[1]);
@@ -2251,6 +2251,9 @@ int main(int argc, char *argv[])
     quantum_speed = n;
     min_speed = Vec3(-n, -n, -n);
     max_speed = Vec3(n, n, n);
+  }
+  if(argc > 5) {
+    quantum_radius = atof(argv[5]);
   }
 
   if(SDL_Init(SDL_INIT_VIDEO|SDL_INIT_JOYSTICK) != 0) {
