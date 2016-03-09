@@ -37,6 +37,10 @@
     } \
   }
 
+#define warn(condition) { \
+  if(!(condition)) { std::cout << "Warning:" << __LINE__ << ": " << #condition << std::endl; } \
+}
+
 #define APP_TITLE "Quanta 1"
 #define APP_LOGO "quanta.bmp"
 #define APP_WIDTH 800
@@ -1861,11 +1865,11 @@ namespace XPad
 class Quantum
 {
   Vec3 _position, _velocity, _color;
-  float _scale;
+  float _scale, _mass;
 
 public:
-  Quantum(const Vec3 &position, const Vec3 &velocity, float scale = 100, const Vec3 &color = Colors::White)
-    : _position(position), _velocity(velocity), _color(color), _scale(scale)
+  Quantum(const Vec3 &position, const Vec3 &velocity, float scale = 100, const Vec3 &color = Colors::White, float mass = 1.0f)
+    : _position(position), _velocity(velocity), _color(color), _scale(scale), _mass(mass)
   {
   }
 
@@ -1875,6 +1879,8 @@ public:
   Quantum &setVelocity(const Vec3 &v) { _velocity = v; return *this; }
   const Vec3 &color() const { return _color; }
   Quantum &setColor(const Vec3 &c) { _color = c; return *this; }
+  float mass() const { return _mass; }
+  Quantum &setMass(float m) { _mass = m; return *this; }
 
   float universeSize() const { return _scale; }
 
@@ -2061,17 +2067,30 @@ public:
     Vec3 ac = a.position() + a.velocity() * t;
     Vec3 bc = b.position() + b.velocity() * t;
 
+#ifdef BADMATH
     Vec3 n = ac - bc;
     Vec3 na = a.velocity().projectOnto(n);
     Vec3 nb = b.velocity().projectOnto(n);
     Vec3 va = (a.velocity() - na) + nb;
     Vec3 vb = (b.velocity() - nb) + na;
+#else
+    // courtesy of http://www.gamasutra.com/view/feature/131424/pool_hall_lessons_fast_accurate_.php
+    Vec3 n = (ac - bc).normalize();
+    float aa = a.velocity().dot(n);
+    float ab = b.velocity().dot(n);
+    float p = (2.0f * (aa - ab)) / (a.mass() + b.mass());
+    Vec3 va = a.velocity() - p * b.mass() * n;
+    Vec3 vb = b.velocity() + p * a.mass() * n;
+#endif
+
     if(va.isNaN() || vb.isNaN()) return false;
 
+    warn(((a.mass()*a.velocity() + b.mass()*b.velocity()) - (a.mass()*va + b.mass()*vb)).magnitude() <= 0.01f);
+
     a.setVelocity(va);
-    a.setPosition(ac + va * (dt - t));
+    a.setPosition(ac);
     b.setVelocity(vb);
-    b.setPosition(bc + vb * (dt - t));
+    b.setPosition(bc);
 
     /*
     Vec3 ca = b.color().reflectBy(n).normalize();
@@ -2276,7 +2295,7 @@ int main(int argc, char *argv[])
   Vec3 min_position(-2048, -2048, -2048), max_position(2048, 2048, 2048);
   Vec3 min_speed(-10, -10, -10), max_speed(10, 10, 10);
   int num_quanta = 1024, universe_size = 2048, generation = 0;
-  float quantum_speed = 0.0f, quantum_forward_speed = 0.0f, quantum_radius = 0.5f;
+  float quantum_speed = 0.0f, quantum_forward_speed = 0.0f, quantum_radius = 0.5f, quantum_mass = 1.0f;
 
   if(argc > 1) {
     num_quanta = atoi(argv[1]);
@@ -2586,7 +2605,7 @@ int main(int argc, char *argv[])
           break;
         case SDL_SCANCODE_RETURN:
           if(event.type == SDL_KEYDOWN) {
-            quanta.push_back(new Quantum(camera->forward() * near_plane * 2.0f + camera->position(), camera->forward() * quantum_speed, universe_size, Colors::color()));
+            quanta.push_back(new Quantum(camera->forward() * near_plane * 1.5f + camera->position(), camera->forward() * quantum_speed, universe_size, Colors::color(), quantum_mass));
           }
           break;
         case SDL_SCANCODE_EQUALS:
@@ -2599,6 +2618,18 @@ int main(int argc, char *argv[])
           if(event.type == SDL_KEYDOWN) {
             quantum_speed -= 0.1f;
             std::cout << "Quantum speed: " << quantum_speed << std::endl;
+          }
+          break;
+        case SDL_SCANCODE_U:
+          if(event.type == SDL_KEYDOWN) {
+            quantum_mass -= 1.0f;
+            std::cout << "Quantum mass: " << quantum_mass << std::endl;
+          }
+          break;
+        case SDL_SCANCODE_I:
+          if(event.type == SDL_KEYDOWN) {
+            quantum_mass += 1.0f;
+            std::cout << "Quantum mass: " << quantum_mass << std::endl;
           }
           break;
         case SDL_SCANCODE_LEFTBRACKET:
@@ -2629,10 +2660,11 @@ int main(int argc, char *argv[])
           if(event.type == SDL_KEYDOWN) {
             Vec3 color = Colors::color(generation++);
             for(int i = 0; i < num_quanta; i++) {
-              quanta.push_back(new Quantum(camera->forward() * near_plane * 2.0f + camera->position() + Vec3::random(min_position, max_position),
+              quanta.push_back(new Quantum(camera->forward() * near_plane * 1.5f + camera->position() + Vec3::random(min_position, max_position),
                                        quantum_forward_speed * camera->forward() + quantum_speed * Vec3::random(min_speed, max_speed).normalize(),
                                        universe_size,
-                                       color));
+                                       color,
+                                       quantum_mass));
             }
           }
           break;
@@ -2644,10 +2676,11 @@ int main(int argc, char *argv[])
             for(int x = 0; x < maxq; x++) {
               for(int y = 0; y < maxq; y++) {
                 for(int z = 0; z < maxq; z++) {
-                  quanta.push_back(new Quantum(camera->forward() * near_plane * 2.0f + camera->position() + (Vec3(x, y, z) / maxq * d - d / 2),
+                  quanta.push_back(new Quantum(camera->forward() * near_plane * 1.5f + camera->position() + (Vec3(x, y, z) / maxq * d - d / 2),
                                                quantum_forward_speed * camera->forward() + quantum_speed * Vec3::random(min_speed, max_speed).normalize(),
                                                universe_size,
-                                               color));
+                                               color,
+                                               quantum_mass));
                 }
               }
             }
@@ -2681,7 +2714,7 @@ int main(int argc, char *argv[])
         switch(event.button.button) {
           case SDL_BUTTON_LEFT:
             if(event.button.clicks == 1) {
-              quanta.push_back(new Quantum(camera->forward() * near_plane * 2.0f + camera->position(), camera->forward() * quantum_speed, universe_size, Colors::color()));
+              quanta.push_back(new Quantum(camera->forward() * near_plane * 1.5f + camera->position(), camera->forward() * quantum_speed, universe_size, Colors::color(), quantum_mass));
             }
             break;
           case SDL_BUTTON_RIGHT:
@@ -2706,6 +2739,13 @@ int main(int argc, char *argv[])
         } else if(event.wheel.y < 0) {
           quantum_speed -= 0.1f;
           std::cout << "Quantum speed: " << quantum_speed << std::endl;
+        }
+        if(event.wheel.x > 0) {
+          quantum_mass += 1.0f;
+          std::cout << "Quantum mass: " << quantum_mass << std::endl;
+        } else if(event.wheel.x < 0) {
+          quantum_mass -= 1.0f;
+          std::cout << "Quantum mass: " << quantum_mass << std::endl;
         }
         break;
       case SDL_JOYAXISMOTION:
