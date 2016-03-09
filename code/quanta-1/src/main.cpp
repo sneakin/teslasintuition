@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <vector>
+#include <set>
 #include <map>
 #include <algorithm>
 #include <SDL2/SDL.h>
@@ -1957,6 +1958,16 @@ public:
 
   virtual void update(float dt)
   {
+    typedef std::pair<float, int> collision_t;
+    struct collision_compare: public std::less<collision_t>
+    {
+       bool operator() (const collision_t &a, const collision_t &b) {
+         return a.first < b.first;
+       }
+    };
+    typedef std::set<collision_t, collision_compare> seen_list_t;
+    seen_list_t colliders;
+
     bool *seen = new bool[size()];
     for(int i = 0; i < size(); i++) {
       seen[i] = false;
@@ -1964,33 +1975,34 @@ public:
 
     // test for collisions
     for(int i = 0; i < size(); i++) {
-      float t = NAN;
-      int q_n = -1;
+      // find any colliders
+      colliders.clear();
 
-      // find the nearest collider
       for(int j = 0; j < size(); j++) {
         if(i != j && seen[i] != true && seen[j] != true) {
-          float jt = collidesAt((*this)[i], (*this)[j], dt);
-          if(!isnan(jt)) {
-            if(jt < t || isnan(t)) {
-              t = jt;
-              q_n = j;
-            }
+          float t = collidesAt((*this)[i], (*this)[j], dt);
+          if(!isnan(t)) {
+            colliders.insert(collision_t(t, j));
           }
         }
       }
 
       // update position and velocity
-      if(q_n >= 0) {
-        collide((*this)[i], (*this)[q_n], t, dt);
-        seen[i] = true;
-        seen[q_n] = true;
+      float t_remaining = dt;
 
-        // TODO collide with any other colliders, not just the nearest
-      } else {
-        (*this)[i].update(dt);
-        seen[i] = true;
+      if(colliders.size() > 0) {
+        for(auto c: colliders) { // todo verify positioning and timing of 2nd and subsequent collision
+          float t = collidesAt((*this)[i], (*this)[c.second], t_remaining);
+          if(!isnan(t)) {
+            collide((*this)[i], (*this)[c.second], t, t_remaining);
+            t_remaining -= t;
+          }
+          //seen[c.second] = true;
+        }
       }
+
+      (*this)[i].update(t_remaining);
+      seen[i] = true;
     }
 
     delete[] seen;
