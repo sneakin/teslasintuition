@@ -339,6 +339,11 @@ public:
                 delta.w() != 0.0f ? randf() * delta.w() : 0.0f) - offset;
   }
 
+  static Vec3 random()
+  {
+    return random(Vec3(-1024.0, -1024.0, -1024.0),
+                  Vec3(1024.0, 1024.0, 1024.0)).normalize();
+  }
 };
 
 const Vec3 Vec3::X(1, 0, 0), Vec3::Y(0, 1, 0), Vec3::Z(0, 0, 1), Vec3::W(0, 0, 0, 1), Vec3::Origin(0, 0, 0);
@@ -2258,10 +2263,10 @@ int main(int argc, char *argv[])
   unsigned int frames = 0, ms_per_frame = 0, frame_start = 0;
   int joystick_index = 0;
   Real near_plane = 4.0, far_plane = 1024.0 * 8.0;
-  Vec3 min_position(-2048, -2048, -2048), max_position(2048, 2048, 2048);
-  Vec3 min_speed(-10, -10, -10), max_speed(10, 10, 10);
-  int num_quanta = 1024, universe_size = 2048, generation = 0;
+  int num_quanta = 125, universe_size = 2048, generation = 0;
   Real quantum_speed = 0.0, quantum_forward_speed = 0.0, quantum_radius = 0.5f, quantum_mass = 1.0;
+  Real mp = quantum_radius * 2.5f;
+  Vec3 min_position(-mp, -mp, -mp), max_position(mp, mp, mp);
 
   if(argc > 1) {
     num_quanta = atoi(argv[1]);
@@ -2277,11 +2282,12 @@ int main(int argc, char *argv[])
   if(argc > 4) {
     Real n = ator(argv[4]);
     quantum_speed = n;
-    min_speed = Vec3(-n, -n, -n);
-    max_speed = Vec3(n, n, n);
   }
   if(argc > 5) {
     quantum_radius = ator(argv[5]);
+  }
+  if(argc > 6) {
+    quantum_mass = ator(argv[6]);
   }
 
   if(SDL_Init(SDL_INIT_VIDEO|SDL_INIT_JOYSTICK) != 0) {
@@ -2371,14 +2377,6 @@ int main(int argc, char *argv[])
   Camera *view_camera = camera;
 
   Quanta quanta(quantum_radius);
-/*
-  for(int i = 0; i < num_quanta; i++) {
-    quanta.push_back(Quantum(Vec3::random(min_position, max_position),
-                             Vec3::random(min_speed, max_speed),
-                             universe_size,
-                             Colors::color(i)));
-  }
-*/
   QuantaRenderer quanta_renderer(renderer);
 
   PlayerCommandState player_command_state;
@@ -2627,7 +2625,7 @@ int main(int argc, char *argv[])
             Vec3 color = Colors::color(generation++);
             for(int i = 0; i < num_quanta; i++) {
               quanta.push_back(new Quantum(camera->forward() * near_plane * 1.5f + camera->position() + Vec3::random(min_position, max_position),
-                                       quantum_forward_speed * camera->forward() + quantum_speed * Vec3::random(min_speed, max_speed).normalize(),
+                                       quantum_forward_speed * camera->forward() + quantum_speed * Vec3::random(),
                                        universe_size,
                                        color,
                                        quantum_mass));
@@ -2643,7 +2641,7 @@ int main(int argc, char *argv[])
               for(int y = 0; y < maxq; y++) {
                 for(int z = 0; z < maxq; z++) {
                   quanta.push_back(new Quantum(camera->forward() * near_plane * 1.5f + camera->position() + (Vec3(x, y, z) / maxq * d - d / 2),
-                                               quantum_forward_speed * camera->forward() + quantum_speed * Vec3::random(min_speed, max_speed).normalize(),
+                                               quantum_forward_speed * camera->forward() + quantum_speed * Vec3::random(),
                                                universe_size,
                                                color,
                                                quantum_mass));
