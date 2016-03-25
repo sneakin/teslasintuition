@@ -53,6 +53,7 @@ typedef float Real;
 #define glLightrv glLightfv
 #define glLightr glLightf
 #define glMaterialrv glMaterialfv
+#define glFogrv glFogfv
 
 #else
 typedef double Real;
@@ -79,13 +80,19 @@ typedef double Real;
 #define glColor4rv glColor4dv
 #define glLightr glLightf
 
-void glLightrv(GLenum light, GLenum a, const double v[4])
+void glLightrv(GLenum light, GLenum a, const Real v[4])
 {
   float fv[4] = { (float)v[0], (float)v[1], (float)v[2], (float)v[3] };
   glLightfv(light, a, fv);
 }
 
-void glMaterialrv(GLenum face, GLenum a, const double v[4])
+void glFogrv(GLenum name, const Real v[4])
+{
+  float fv[4] = { (float)v[0], (float)v[1], (float)v[2], (float)v[3] };
+  glFogfv(name, fv);
+}
+
+void glMaterialrv(GLenum face, GLenum a, const Real v[4])
 {
   float fv[4] = { (float)v[0], (float)v[1], (float)v[2], (float)v[3] };
   glMaterialfv(face, a, fv);
