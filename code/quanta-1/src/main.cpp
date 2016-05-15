@@ -28,6 +28,7 @@
 #include "math-fun.hpp"
 
 #ifdef CHEAPER_MATH
+typedef int Integer;
 typedef float Real;
 
 #define ator atof
@@ -56,6 +57,7 @@ typedef float Real;
 #define glFogrv glFogfv
 
 #else
+typedef long Integer;
 typedef double Real;
 
 #define ator atof
@@ -146,11 +148,30 @@ Vec3 operator* (Real a, const Vec3 &v);
 
 class Vec3
 {
-  Real _v[4];
+#ifdef SLOW_VECTOR
+  typedef Real RealArray[4];
+#else
+  typedef Real RealArray __attribute__((vector_size(sizeof(Real) * 4)));
+  typedef Integer BoolArray __attribute__((vector_size(sizeof(Integer) * 4)));
+#endif
+
+  RealArray _v;
+  
 public:
   static const Vec3 X, Y, Z, W, Origin;
   static const Vec3 nX, nY, nZ, nW;
 
+  Vec3(const RealArray other)
+  {
+#ifdef SLOW_VECTOR
+    for(int i = 0; i < 4; i++) {
+      _v[i] = other[i];
+    }
+#else
+    _v = other;
+#endif
+  }
+  
   Vec3(Real x = 0.0f, Real y = 0.0f, Real z = 0.0f, Real w = 1.0f)
   {
     _v[0] = x;
@@ -172,12 +193,21 @@ public:
   Real w() const { return _v[3]; }
   void setW(Real n) { _v[3] = n; }
 
+#ifdef SLOW_VECTOR
 #define SCALAR_OP(OP) \
   template<typename T> \
   Vec3 operator OP (const T &n) const \
   { \
     return Vec3(_v[0] OP n, _v[1] OP n, _v[2] OP n, _v[3] OP n); \
   }
+#else
+#define SCALAR_OP(OP) \
+  template<typename T> \
+  Vec3 operator OP (const T &n) const \
+  { \
+    return Vec3(_v OP (Real)n);                 \
+  }
+#endif
 
   SCALAR_OP(+);
   SCALAR_OP(-);
@@ -186,13 +216,21 @@ public:
 
   Vec3 &operator += (const Vec3 &other)
   {
+#ifdef SLOW_VECTOR
     for(int i = 0; i < 4; i++) _v[i] += other._v[i];
+#else
+    _v = _v + other._v;
+#endif
     return *this;
   }
 
   Vec3 &operator -= (const Vec3 &other)
   {
+#ifdef SLOW_VECTOR
     for(int i = 0; i < 4; i++) _v[i] -= other._v[i];
+#else
+    _v = _v - other._v;
+#endif
     return *this;
   }
 
@@ -208,11 +246,19 @@ public:
     return Vec3(fmodr(x(), n), fmodr(y(), n), fmodr(z(), n), fmodr(w(), n));
   }
 
+#ifdef SLOW_VECTOR
 #define VECTOR_OP(OP) \
   Vec3 operator OP (const Vec3 &other) const \
   { \
     return Vec3(_v[0] OP other._v[0], _v[1] OP other._v[1], _v[2] OP other._v[2], _v[3] OP other._v[3]); \
   }
+#else
+#define VECTOR_OP(OP) \
+  Vec3 operator OP (const Vec3 &other) const \
+  { \
+    return Vec3(_v OP other._v); \
+  }
+#endif
 
   VECTOR_OP(+);
   VECTOR_OP(-);
@@ -227,31 +273,52 @@ public:
     //   fabs(y() - other.y()) < 0.001 &&
     //   fabs(z() - other.z()) < 0.001 &&
     //   fabs(w() - other.w()) < 0.001;
+#ifdef SLOW_VECTOR
     return x()==other.x() && y() == other.y() && z() == other.z(); // && w() == other.w();
+#else
+    BoolArray a = _v == other._v;
+    return a[0] && a[1] && a[2];
+#endif
   }
 
   bool operator != (const Vec3 &other) const
   {
+#ifdef SLOW_VECTOR
     return x()!=other.x() || y() != other.y() || z() != other.z(); // || w() != other.w();
+#else
+    BoolArray a = _v != other._v;
+    return a[0] || a[1] || a[2];
+#endif
   }
 
   Vec3 cross(const Vec3 &other) const
   {
+#ifdef SLOW_VECTOR
     return Vec3(_v[1] * other._v[2] - _v[2] * other._v[1],
                 _v[2] * other._v[0] - _v[0] * other._v[2],
                 _v[0] * other._v[1] - _v[1] * other._v[0]);
+#else
+    RealArray a = { _v[1], _v[2], _v[0] };
+    RealArray b = { other._v[2], other._v[0], other._v[1] };
+    RealArray c = { _v[2], _v[0], _v[1] };
+    RealArray d = { other._v[1], other._v[2], other._v[0] };
+    return Vec3(a * b - c * d);
+#endif
   }
 
   Real dot(const Vec3 &other) const
   {
+#ifdef SLOW_VECTOR
     return x()*other.x() + y()*other.y() + z()*other.z();
+#else
+    RealArray a = _v * other._v;
+    return a[0] + a[1] + a[2];
+#endif
   }
 
   Vec3 normalize() const
   {
-    Vec3 r = *this / magnitude();
-    r.setW(0);
-    return r;
+    return *this / magnitude() * Vec3(1.0, 1.0, 1.0, 0.0);;
   }
 
   Real magnitude() const
@@ -261,7 +328,12 @@ public:
 
   Real magnitude_squared() const
   {
+#ifdef SLOW_VECTOR
     return (_v[0] * _v[0] + _v[1] * _v[1] + _v[2] * _v[2]);
+#else
+    RealArray a = _v * _v;
+    return a[0] + a[1] + a[2];
+#endif
   }
 
   Real scalarProjection(const Vec3 &v) const
@@ -286,7 +358,7 @@ public:
 
   Vec3 negate() const
   {
-    return *this * -1;
+    return -(*this);
   }
 
   bool isNaN() const {
@@ -296,13 +368,17 @@ public:
     return false;
   }
 
-  const Real *get() const { return _v; }
+  const Real *get() const { return (Real *)&_v; }
 
   void set(const Vec3 &other)
   {
+#ifdef SLOW_VECTOR
     for(int i = 0; i < 4; i++) {
       _v[i] = other._v[i];
     }
+#else
+    _v = other._v;
+#endif
   }
 
   operator const Real * () const
@@ -351,6 +427,11 @@ public:
     return random(Vec3(-1024.0, -1024.0, -1024.0),
                   Vec3(1024.0, 1024.0, 1024.0)).normalize();
   }
+
+  Vec3 floor() const
+  {
+    return Vec3(::floorr(x()), ::floorr(y()), ::floorr(z()), ::floorr(w()));
+  }
 };
 
 const Vec3 Vec3::X(1, 0, 0), Vec3::Y(0, 1, 0), Vec3::Z(0, 0, 1), Vec3::W(0, 0, 0, 1), Vec3::Origin(0, 0, 0);
@@ -373,25 +454,55 @@ Vec3 operator* (double a, const Vec3 &v)
 
 class Matrix
 {
-  Real _values[16];
+#ifdef SLOW_VECTOR
+  typedef Real RealArray[16];
+#else
+  typedef Real RealArray __attribute__((vector_size(sizeof(Real) * 16)));
+#endif
+  RealArray _values;
 
 public:
   Matrix()
   {
+#if 1
     for(int i = 0; i < 4; i++) {
       for(int j = 0; j < 4; j++) {
         _values[i*4+j] = (Real)0.0;
       }
     }
+#else
+    _values = { (Real)0.0, (Real)0.0, (Real)0.0, (Real)0.0,
+                (Real)0.0, (Real)0.0, (Real)0.0, (Real)0.0,
+                (Real)0.0, (Real)0.0, (Real)0.0, (Real)0.0,
+                (Real)0.0, (Real)0.0, (Real)0.0, (Real)0.0
+    };
+#endif
   }
 
   Matrix(const Matrix &m)
   {
+#ifdef SLOW_VECTOR    
     for(int i = 0; i < 4; i++) {
       for(int j = 0; j < 4; j++) {
         _values[i*4+j] = m._values[i*4+j];
       }
     }
+#else
+    _values = m._values;
+#endif
+  }
+
+  Matrix(const RealArray other)
+  {
+#ifdef SLOW_VECTOR
+    for(int i = 0; i < 4; i++) {
+      for(int j = 0; j < 4; j++) {
+        _values[i*4+j] = other[i*4+j];
+      }
+    }
+#else
+    _values = other;
+#endif
   }
 
   Matrix(Real a, Real b, Real c, Real d,
@@ -420,6 +531,7 @@ public:
     set(3, 3, p);
   }
 
+#ifdef SLOW_VECTOR
 #define BINARY_OP(OP) \
   Matrix operator OP (const Matrix &m) const \
   { \
@@ -433,7 +545,14 @@ public:
     \
     return ret;\
   }
+#else
+#define BINARY_OP(OP) \
+  Matrix operator OP (const Matrix &m) const \
+  { \
+    return Matrix(_values OP m._values); \
+  }
 
+#endif
   BINARY_OP(+);
   BINARY_OP(-);
 
@@ -464,6 +583,7 @@ public:
 
   Matrix operator*(Real n) const
   {
+#ifdef SLOW_VECTOR
     Matrix ret;
     for(int i = 0; i < 4; i++) {
       for(int j = 0; j < 4; j++) {
@@ -471,10 +591,14 @@ public:
       }
     }
     return ret;
+#else
+    return Matrix(_values * n);
+#endif
   }
 
   Matrix operator/(Real n) const
   {
+#ifdef SLOW_VECTOR
     Matrix ret;
     for(int i = 0; i < 4; i++) {
       for(int j = 0; j < 4; j++) {
@@ -482,6 +606,9 @@ public:
       }
     }
     return ret;
+#else
+    return Matrix(_values / n);
+#endif
   }
 
   Matrix transpose() const
@@ -720,7 +847,7 @@ public:
   }
 
   const Real *get() const {
-    return _values;
+    return (Real *)&_values;
   }
 
   operator const Real * () const

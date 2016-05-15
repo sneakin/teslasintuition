@@ -22,7 +22,7 @@ CFLAGS+=-pg -fprofile-arcs -ftest-coverage
 endif
 
 ifdef RELEASE
-CFLAGS+=-O3 -mtune=nocona
+CFLAGS+=-O3 -mtune=nocona -msse -msse2 -msse3 -mfpmath=sse
 endif
 
 ifdef WRAPAROUND
