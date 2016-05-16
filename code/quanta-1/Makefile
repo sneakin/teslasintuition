@@ -24,7 +24,7 @@ ifdef RELEASE
 ifdef RASPBERRY
 CFLAGS+=-O3 -fomit-frame-pointer -mfpu=neon-vfpv4
 else
-CFLAGS+=-O3 -mtune=nocona
+CFLAGS+=-O3 -mtune=nocona -msse -msse2 -msse3 -mfpmath=sse
 endif
 endif
 
@@ -34,6 +34,10 @@ endif
 
 ifdef BADMATH
 CFLAGS+=-DBADMATH
+endif
+
+ifdef CHEAPER_MATH
+CFLAGS+=-DCHEAPER_MATH
 endif
 
 CFLAGS+=$(MOREFLAGS)

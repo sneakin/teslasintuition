@@ -27,6 +27,81 @@
 
 #include "math-fun.hpp"
 
+#ifdef CHEAPER_MATH
+typedef int Integer;
+typedef float Real;
+
+#define ator atof
+
+#define fmodr fmodf
+#define acosr acosf
+#define floorr floorf
+#define ceilr ceilf
+#define modfr modff
+#define atan2r atan2f
+#define sqrtr sqrtf
+#define rabs fabs
+
+#define glVertex3r glVertex3f
+#define glVertex3rv glVertex3fv
+#define glNormal3rv glNormal3fv
+#define glLoadMatrixr glLoadMatrixf
+#define glMultMatrixr glMultMatrixf
+#define glScaler glScalef
+#define glTranslater glTranslatef
+#define glColor3rv glColor3fv
+#define glColor4rv glColor4fv
+#define glLightrv glLightfv
+#define glLightr glLightf
+#define glMaterialrv glMaterialfv
+#define glFogrv glFogfv
+
+#else
+typedef long Integer;
+typedef double Real;
+
+#define ator atof
+
+#define fmodr fmod
+#define acosr acos
+#define floorr floor
+#define ceilr ceil
+#define modfr modf
+#define atan2r atan2
+#define sqrtr sqrt
+#define rabs fabs
+
+#define glVertex3r glVertex3d
+#define glVertex3rv glVertex3dv
+#define glNormal3rv glNormal3dv
+#define glLoadMatrixr glLoadMatrixd
+#define glMultMatrixr glMultMatrixd
+#define glScaler glScaled
+#define glTranslater glTranslated
+#define glColor3rv glColor3dv
+#define glColor4rv glColor4dv
+#define glLightr glLightf
+
+void glLightrv(GLenum light, GLenum a, const Real v[4])
+{
+  float fv[4] = { (float)v[0], (float)v[1], (float)v[2], (float)v[3] };
+  glLightfv(light, a, fv);
+}
+
+void glFogrv(GLenum name, const Real v[4])
+{
+  float fv[4] = { (float)v[0], (float)v[1], (float)v[2], (float)v[3] };
+  glFogfv(name, fv);
+}
+
+void glMaterialrv(GLenum face, GLenum a, const Real v[4])
+{
+  float fv[4] = { (float)v[0], (float)v[1], (float)v[2], (float)v[3] };
+  glMaterialfv(face, a, fv);
+}
+
+#endif /* CHEAPER_MATH */
+
 #define DELEGATE(type, method, member) \
   type method() const { return member.method(); }
 
@@ -69,16 +144,35 @@ using std::isinf;
 #endif
 
 class Vec3;
-Vec3 operator* (float a, const Vec3 &v);
+Vec3 operator* (Real a, const Vec3 &v);
 
 class Vec3
 {
-  float _v[4];
+#ifdef SLOW_VECTOR
+  typedef Real RealArray[4];
+#else
+  typedef Real RealArray __attribute__((vector_size(sizeof(Real) * 4)));
+  typedef Integer BoolArray __attribute__((vector_size(sizeof(Integer) * 4)));
+#endif
+
+  RealArray _v;
+  
 public:
   static const Vec3 X, Y, Z, W, Origin;
   static const Vec3 nX, nY, nZ, nW;
 
-  Vec3(float x = 0.0f, float y = 0.0f, float z = 0.0f, float w = 1.0f)
+  Vec3(const RealArray other)
+  {
+#ifdef SLOW_VECTOR
+    for(int i = 0; i < 4; i++) {
+      _v[i] = other[i];
+    }
+#else
+    _v = other;
+#endif
+  }
+  
+  Vec3(Real x = 0.0f, Real y = 0.0f, Real z = 0.0f, Real w = 1.0f)
   {
     _v[0] = x;
     _v[1] = y;
@@ -90,21 +184,30 @@ public:
     set(other);
   }
 
-  float x() const { return _v[0]; }
-  void setX(float n) { _v[0] = n; }
-  float y() const { return _v[1]; }
-  void setY(float n) { _v[1] = n; }
-  float z() const { return _v[2]; }
-  void setZ(float n) { _v[2] = n; }
-  float w() const { return _v[3]; }
-  void setW(float n) { _v[3] = n; }
+  Real x() const { return _v[0]; }
+  void setX(Real n) { _v[0] = n; }
+  Real y() const { return _v[1]; }
+  void setY(Real n) { _v[1] = n; }
+  Real z() const { return _v[2]; }
+  void setZ(Real n) { _v[2] = n; }
+  Real w() const { return _v[3]; }
+  void setW(Real n) { _v[3] = n; }
 
+#ifdef SLOW_VECTOR
 #define SCALAR_OP(OP) \
   template<typename T> \
   Vec3 operator OP (const T &n) const \
   { \
     return Vec3(_v[0] OP n, _v[1] OP n, _v[2] OP n, _v[3] OP n); \
   }
+#else
+#define SCALAR_OP(OP) \
+  template<typename T> \
+  Vec3 operator OP (const T &n) const \
+  { \
+    return Vec3(_v OP (Real)n);                 \
+  }
+#endif
 
   SCALAR_OP(+);
   SCALAR_OP(-);
@@ -113,13 +216,21 @@ public:
 
   Vec3 &operator += (const Vec3 &other)
   {
+#ifdef SLOW_VECTOR
     for(int i = 0; i < 4; i++) _v[i] += other._v[i];
+#else
+    _v = _v + other._v;
+#endif
     return *this;
   }
 
   Vec3 &operator -= (const Vec3 &other)
   {
+#ifdef SLOW_VECTOR
     for(int i = 0; i < 4; i++) _v[i] -= other._v[i];
+#else
+    _v = _v - other._v;
+#endif
     return *this;
   }
 
@@ -130,16 +241,24 @@ public:
 
 #undef SCALAR_OP
 
-  Vec3 operator % (float n) const
+  Vec3 operator % (Real n) const
   {
-    return Vec3(fmodf(x(), n), fmodf(y(), n), fmodf(z(), n), fmodf(w(), n));
+    return Vec3(fmodr(x(), n), fmodr(y(), n), fmodr(z(), n), fmodr(w(), n));
   }
 
+#ifdef SLOW_VECTOR
 #define VECTOR_OP(OP) \
   Vec3 operator OP (const Vec3 &other) const \
   { \
     return Vec3(_v[0] OP other._v[0], _v[1] OP other._v[1], _v[2] OP other._v[2], _v[3] OP other._v[3]); \
   }
+#else
+#define VECTOR_OP(OP) \
+  Vec3 operator OP (const Vec3 &other) const \
+  { \
+    return Vec3(_v OP other._v); \
+  }
+#endif
 
   VECTOR_OP(+);
   VECTOR_OP(-);
@@ -149,49 +268,75 @@ public:
 
   bool operator == (const Vec3 &other) const
   {
-    //return (*this - other).magnitude() < 0.001f;
-    // return fabs(x() - other.x()) < 0.001f &&
-    //   fabs(y() - other.y()) < 0.001f &&
-    //   fabs(z() - other.z()) < 0.001f &&
-    //   fabs(w() - other.w()) < 0.001f;
+    //return (*this - other).magnitude() < 0.001;
+    // return fabs(x() - other.x()) < 0.001 &&
+    //   fabs(y() - other.y()) < 0.001 &&
+    //   fabs(z() - other.z()) < 0.001 &&
+    //   fabs(w() - other.w()) < 0.001;
+#ifdef SLOW_VECTOR
     return x()==other.x() && y() == other.y() && z() == other.z(); // && w() == other.w();
+#else
+    BoolArray a = _v == other._v;
+    return a[0] && a[1] && a[2];
+#endif
   }
 
   bool operator != (const Vec3 &other) const
   {
+#ifdef SLOW_VECTOR
     return x()!=other.x() || y() != other.y() || z() != other.z(); // || w() != other.w();
+#else
+    BoolArray a = _v != other._v;
+    return a[0] || a[1] || a[2];
+#endif
   }
 
   Vec3 cross(const Vec3 &other) const
   {
+#ifdef SLOW_VECTOR
     return Vec3(_v[1] * other._v[2] - _v[2] * other._v[1],
                 _v[2] * other._v[0] - _v[0] * other._v[2],
                 _v[0] * other._v[1] - _v[1] * other._v[0]);
+#else
+    RealArray a = { _v[1], _v[2], _v[0] };
+    RealArray b = { other._v[2], other._v[0], other._v[1] };
+    RealArray c = { _v[2], _v[0], _v[1] };
+    RealArray d = { other._v[1], other._v[2], other._v[0] };
+    return Vec3(a * b - c * d);
+#endif
   }
 
-  float dot(const Vec3 &other) const
+  Real dot(const Vec3 &other) const
   {
+#ifdef SLOW_VECTOR
     return x()*other.x() + y()*other.y() + z()*other.z();
+#else
+    RealArray a = _v * other._v;
+    return a[0] + a[1] + a[2];
+#endif
   }
 
   Vec3 normalize() const
   {
-    Vec3 r = *this / magnitude();
-    r.setW(0);
-    return r;
+    return *this / magnitude() * Vec3(1.0, 1.0, 1.0, 0.0);;
   }
 
-  float magnitude() const
+  Real magnitude() const
   {
     return sqrt(magnitude_squared());
   }
 
-  float magnitude_squared() const
+  Real magnitude_squared() const
   {
+#ifdef SLOW_VECTOR
     return (_v[0] * _v[0] + _v[1] * _v[1] + _v[2] * _v[2]);
+#else
+    RealArray a = _v * _v;
+    return a[0] + a[1] + a[2];
+#endif
   }
 
-  float scalarProjection(const Vec3 &v) const
+  Real scalarProjection(const Vec3 &v) const
   {
     return dot(v.normalize());
   }
@@ -213,7 +358,7 @@ public:
 
   Vec3 negate() const
   {
-    return *this * -1;
+    return -(*this);
   }
 
   bool isNaN() const {
@@ -223,21 +368,25 @@ public:
     return false;
   }
 
-  const float *get() const { return _v; }
+  const Real *get() const { return (Real *)&_v; }
 
   void set(const Vec3 &other)
   {
+#ifdef SLOW_VECTOR
     for(int i = 0; i < 4; i++) {
       _v[i] = other._v[i];
     }
+#else
+    _v = other._v;
+#endif
   }
 
-  operator const float * () const
+  operator const Real * () const
   {
     return get();
   }
 
-  Vec3 clamp(float min = 0.0f, float max = 1.0f) const
+  Vec3 clamp(Real min = 0.0f, Real max = 1.0f) const
   {
     return Vec3(::clamp(x(), max, min),
                 ::clamp(y(), max, min),
@@ -258,9 +407,9 @@ public:
     return Vec3(fabs(x()), fabs(y()), fabs(z()), fabs(w()));
   }
 
-  static float randf()
+  static Real randf()
   {
-    return (std::rand() & 0xFFFFFF) / (float)0xFFFFFF;
+    return (std::rand() & 0xFFFFFF) / (Real)0xFFFFFF;
   }
 
   static Vec3 random(const Vec3 &min, const Vec3 &max)
@@ -273,6 +422,16 @@ public:
                 delta.w() != 0.0f ? randf() * delta.w() : 0.0f) - offset;
   }
 
+  static Vec3 random()
+  {
+    return random(Vec3(-1024.0, -1024.0, -1024.0),
+                  Vec3(1024.0, 1024.0, 1024.0)).normalize();
+  }
+
+  Vec3 floor() const
+  {
+    return Vec3(::floorr(x()), ::floorr(y()), ::floorr(z()), ::floorr(w()));
+  }
 };
 
 const Vec3 Vec3::X(1, 0, 0), Vec3::Y(0, 1, 0), Vec3::Z(0, 0, 1), Vec3::W(0, 0, 0, 1), Vec3::Origin(0, 0, 0);
@@ -285,36 +444,71 @@ Vec3 operator* (int a, const Vec3 &v)
 
 Vec3 operator* (float a, const Vec3 &v)
 {
-  return v * a;
+  return v * (Real)a;
+}
+
+Vec3 operator* (double a, const Vec3 &v)
+{
+  return v * (Real)a;
 }
 
 class Matrix
 {
-  float _values[16];
+#ifdef SLOW_VECTOR
+  typedef Real RealArray[16];
+#else
+  typedef Real RealArray __attribute__((vector_size(sizeof(Real) * 16)));
+#endif
+  RealArray _values;
 
 public:
   Matrix()
   {
+#if 1
     for(int i = 0; i < 4; i++) {
       for(int j = 0; j < 4; j++) {
-        _values[i*4+j] = 0.0f;
+        _values[i*4+j] = (Real)0.0;
       }
     }
+#else
+    _values = { (Real)0.0, (Real)0.0, (Real)0.0, (Real)0.0,
+                (Real)0.0, (Real)0.0, (Real)0.0, (Real)0.0,
+                (Real)0.0, (Real)0.0, (Real)0.0, (Real)0.0,
+                (Real)0.0, (Real)0.0, (Real)0.0, (Real)0.0
+    };
+#endif
   }
 
   Matrix(const Matrix &m)
   {
+#ifdef SLOW_VECTOR    
     for(int i = 0; i < 4; i++) {
       for(int j = 0; j < 4; j++) {
         _values[i*4+j] = m._values[i*4+j];
       }
     }
+#else
+    _values = m._values;
+#endif
   }
 
-  Matrix(float a, float b, float c, float d,
-         float e, float f, float g, float h,
-         float i, float j, float k, float l,
-         float m, float n, float o, float p)
+  Matrix(const RealArray other)
+  {
+#ifdef SLOW_VECTOR
+    for(int i = 0; i < 4; i++) {
+      for(int j = 0; j < 4; j++) {
+        _values[i*4+j] = other[i*4+j];
+      }
+    }
+#else
+    _values = other;
+#endif
+  }
+
+  Matrix(Real a, Real b, Real c, Real d,
+         Real e, Real f, Real g, Real h,
+         Real i, Real j, Real k, Real l,
+         Real m, Real n, Real o, Real p)
   {
     set(0, 0, a);
     set(1, 0, b);
@@ -337,6 +531,7 @@ public:
     set(3, 3, p);
   }
 
+#ifdef SLOW_VECTOR
 #define BINARY_OP(OP) \
   Matrix operator OP (const Matrix &m) const \
   { \
@@ -350,7 +545,14 @@ public:
     \
     return ret;\
   }
+#else
+#define BINARY_OP(OP) \
+  Matrix operator OP (const Matrix &m) const \
+  { \
+    return Matrix(_values OP m._values); \
+  }
 
+#endif
   BINARY_OP(+);
   BINARY_OP(-);
 
@@ -379,8 +581,9 @@ public:
                 get(0, 3) * v.x() + get(1, 3) * v.y() + get(2, 3) * v.z() + get(3, 3) * v.w());
   }
 
-  Matrix operator*(float n) const
+  Matrix operator*(Real n) const
   {
+#ifdef SLOW_VECTOR
     Matrix ret;
     for(int i = 0; i < 4; i++) {
       for(int j = 0; j < 4; j++) {
@@ -388,10 +591,14 @@ public:
       }
     }
     return ret;
+#else
+    return Matrix(_values * n);
+#endif
   }
 
-  Matrix operator/(float n) const
+  Matrix operator/(Real n) const
   {
+#ifdef SLOW_VECTOR
     Matrix ret;
     for(int i = 0; i < 4; i++) {
       for(int j = 0; j < 4; j++) {
@@ -399,6 +606,9 @@ public:
       }
     }
     return ret;
+#else
+    return Matrix(_values / n);
+#endif
   }
 
   Matrix transpose() const
@@ -412,22 +622,22 @@ public:
     return ret;
   }
 
-  float sign(int x, int y) const
+  Real sign(int x, int y) const
   {
-    return (x*4+(y+x%2)) % 2 ? -1.0f : 1.0f;
+    return (x*4+(y+x%2)) % 2 ? (Real)-1.0 : (Real)1.0;
   }
 
-  float sign3x3(int x, int y) const
+  Real sign3x3(int x, int y) const
   {
-    return (x*3+y) % 2 ? -1.0f : 1.0f;
+    return (x*3+y) % 2 ? (Real)-1.0 : (Real)1.0;
   }
 
-  float cofactor(int x, int y) const
+  Real cofactor(int x, int y) const
   {
     return sign(x, y) * minorM(x, y).determinant3x3();
   }
 
-  float cofactor2x2(int x, int y) const
+  Real cofactor2x2(int x, int y) const
   {
     return sign3x3(x, y) * minorM(x, y).determinant2x2();
   }
@@ -443,9 +653,9 @@ public:
     return m;
   }
 
-  float determinant() const
+  Real determinant() const
   {
-    float d = 0.0f;
+    Real d = (Real)0.0;
 
     for(int i = 0; i < 4; i++) {
       d += get(i, 0) * cofactor(i, 0);
@@ -454,16 +664,16 @@ public:
     return d;
   }
 
-  float determinant3x3() const
+  Real determinant3x3() const
   {
-    float d = 0.0f;
+    Real d = (Real)0.0;
     for(int i = 0; i < 3; i++) {
       d += get(i, 0) * cofactor2x2(i, 0);
     }
     return d;
   }
 
-  float determinant2x2() const
+  Real determinant2x2() const
   {
     return get(0,0) * get(1,1) - get(1,0) * get(0,1);
   }
@@ -489,7 +699,7 @@ public:
 
   Matrix invert() const
   {
-    return adjoint() * (float)(1.0f / determinant());
+    return adjoint() * ((Real)1.0 / determinant());
   }
 
   bool hasNaN() const
@@ -507,7 +717,7 @@ public:
 
   static Matrix rotateOnto(const Vec3 &a, const Vec3 &b)
   {
-    return rotate(acosf(a.dot(b)), a.cross(b));
+    return rotate(acosr(a.dot(b)), a.cross(b));
   }
 
   // https://en.wikipedia.org/wiki/Cross_product#Conversion_to_matrix_multiplication
@@ -519,10 +729,10 @@ public:
                   0, 0, 0, 0);
   }
 
-  static Matrix rotate(float angle, const Vec3 &axis)
+  static Matrix rotate(Real angle, const Vec3 &axis)
   {
-    float c = cos(angle), s = sin(angle), t = 1.0f - c;
-    float x = axis.x(), y = axis.y(), z = axis.z();
+    Real c = cos(angle), s = sin(angle), t = (Real)1.0 - c;
+    Real x = axis.x(), y = axis.y(), z = axis.z();
 
     return Matrix(t*x*x + c,   t*y*x - s*z, t*z*x + s*y, 0,
                   t*x*y + s*z, t*y*y + c  , t*z*y - s*x, 0,
@@ -530,9 +740,9 @@ public:
                   0, 0, 0, 1);
   }
 
-  static Matrix rotateX(float angle)
+  static Matrix rotateX(Real angle)
   {
-    float s = sin(angle), c = cos(angle);
+    Real s = sin(angle), c = cos(angle);
 
     return Matrix(1, 0, 0, 0,
                   0, c, -s, 0,
@@ -540,9 +750,9 @@ public:
                   0, 0, 0, 1);
   }
 
-  static Matrix rotateY(float angle)
+  static Matrix rotateY(Real angle)
   {
-    float s = sin(angle), c = cos(angle);
+    Real s = sin(angle), c = cos(angle);
 
     return Matrix(c, 0, s, 0,
                   0, 1, 0, 0,
@@ -550,9 +760,9 @@ public:
                   0, 0, 0, 1);
   }
 
-  static Matrix rotateZ(float angle)
+  static Matrix rotateZ(Real angle)
   {
-    float s = sin(angle), c = cos(angle);
+    Real s = sin(angle), c = cos(angle);
 
     return Matrix(c, -s, 0, 0,
                   s, c, 0, 0,
@@ -574,7 +784,7 @@ public:
                   0, 0, 0, 1); 
   }
 
-  static Matrix translation(float x, float y, float z)
+  static Matrix translation(Real x, Real y, Real z)
   {
     return translation(Vec3(x, y, z));
   }
@@ -616,7 +826,7 @@ public:
                   0, 0, 0, 1);
   }
 
-  float get(int x, int y) const
+  Real get(int x, int y) const
   {
     if(x < 0 || x >= 4)
       throw IndexOutOfBoundsError(this, x, 4);
@@ -626,7 +836,7 @@ public:
     return _values[x*4+y];
   }
 
-  void set(int x, int y, float v)
+  void set(int x, int y, Real v)
   {
     if(x < 0 || x >= 4)
       throw IndexOutOfBoundsError(this, x, 4);
@@ -636,11 +846,11 @@ public:
     _values[x*4+y] = v;
   }
 
-  const float *get() const {
-    return _values;
+  const Real *get() const {
+    return (Real *)&_values;
   }
 
-  operator const float * () const
+  operator const Real * () const
   {
     return get();
   }
@@ -691,16 +901,16 @@ namespace Colors
     return color(rand());
   }
 
-  Vec3 color(float n)
+  Vec3 color(Real n)
   {
     if(isinf(n)) {
       return White;
     } else if(isnan(n)) {
       return Black;
     } else {
-      Vec3 a = color((int)floorf(n)), b = color((int)ceilf(n));
-      float i, t = modff(n, &i);
-      return a * (1.0f - t) + b * t;
+      Vec3 a = color((int)floorr(n)), b = color((int)ceilr(n));
+      Real i, t = modfr(n, &i);
+      return a * ((Real)1.0 - t) + b * t;
     }
   }
 };
@@ -794,111 +1004,6 @@ public:
   DELEGATE(const Vec3 &, diffuse, _material);
 };
 
-class Point
-{
-  Vec3 _position, _normal;
-  Vec3 _color;
-  Vec3 _offset;
-  bool _generated;
-  int _depth;
-
-public:
-  Point()
-    : _position(0.0f, 0.0f, 0.0f), _normal(0.0f, 0.0f, 0.0f), _color(0.0f, 0.0f, 0.0f), _generated(false), _depth(0)
-  {
-  }
-
-  Point(const Vec3 &position, const Vec3 &color, int depth = 0)
-    : _position(position), _color(color), _depth(depth)
-  {
-  }
-  Point(const Vec3 &position, const Vec3 &offset, const Vec3 &normal, const Vec3 &color, int depth = 0)
-    : _position(position), _normal(normal), _color(color), _offset(offset), _depth(depth)
-  {
-  }
-  Point(const Point &p)
-  : _position(p.position()), _normal(p.normal()), _color(p.color()), _offset(p.offset()), _depth(p.depth())
-  {
-  }
-
-  const Vec3 &position() const { return _position; }
-  void setPosition(const Vec3 &v)
-  {
-    _position = v;
-  }
-
-  void setPositionAndOffset(const Vec3 &v)
-  {
-    Vec3 old_pos = position();
-    setPosition(v);
-    setOffset(offset() + (position() - old_pos));
-  }
-
-  float x() const { return position().x(); }
-  float y() const { return position().y(); }
-  float z() const { return position().z(); }
-
-  const Vec3 &color() const { return _color; }
-  void setColor(const Vec3 &c) { _color = c; }
-
-  const Vec3 &normal() const { return _normal; }
-  void setNormal(const Vec3 &n) { _normal = n; }
-
-  const Vec3 &offset() const { return _offset; }
-  void setOffset(const Vec3 v) { _offset = v; }
-
-  bool generated() const { return _generated; }
-  void setGenerated(bool v = true) { _generated = v; }
-
-  int depth() const { return _depth; }
-  void setDepth(int d) { _depth = d; }
-};
-
-class PointPool
-{
-public:
-  typedef std::vector<Point *> vector;
-  typedef vector::iterator iterator;
-
-private:
-  vector _points;
-
-public:
-  PointPool()
-  {
-  }
-
-  ~PointPool()
-  {
-    for(iterator i = _points.begin(); i != _points.end(); i++) {
-      Point *p = *i;
-      delete p;
-    }
-  }
-
-  Point *add(const Point &p)
-  {
-    Point *a = new Point(p);
-    _points.push_back(a);
-    return a;
-  }
-
-  Point *find(const Vec3 &needle, float epsilon = 0.001f)
-  {
-    for(iterator i = _points.begin(); i != _points.end(); i++) {
-      Vec3 iv = (*i)->position();
-      if((iv - needle).magnitude() <= epsilon) {
-        return *i;
-      }
-    }
-    return NULL;
-  }
-
-  int size() const { return _points.size(); }
-  const Point *get(int n) const { return _points[n]; }
-  Point *get(int n) { return _points[n]; }
-};
-
 class ArgumentError
 {
 public:
@@ -941,19 +1046,19 @@ public:
   {
     Vec3 d = project(point - _verts[0]);
     Vec3 v = point - d;
-    float d_dot = d.dot(normal());
-    float d_sign = d_dot < 0.0f ? -1.0f : 1.0f;
+    Real d_dot = d.dot(normal());
+    Real d_sign = d_dot < 0.0f ? -1.0f : 1.0f;
     Vec3 v0 = _verts[1] - _verts[0], v1 = _verts[2] - _verts[0], v2 = v - _verts[0];
 
-    float d00 = v0.dot(v0),
+    Real d00 = v0.dot(v0),
       d01 = v0.dot(v1),
       d11 = v1.dot(v1),
       d20 = v2.dot(v0),
       d21 = v2.dot(v1);
 
-    float invDenom = 1.0f / (d00 * d11 - d01 * d01);
-    float s = (d11 * d20 - d01 * d21) * invDenom;
-    float t = (d00 * d21 - d01 * d20) * invDenom;
+    Real invDenom = 1.0f / (d00 * d11 - d01 * d01);
+    Real s = (d11 * d20 - d01 * d21) * invDenom;
+    Real t = (d00 * d21 - d01 * d20) * invDenom;
 
     return Vec3(s, d_sign * d.magnitude(), t);
   }
@@ -981,7 +1086,7 @@ public:
 
   Vec3 cartCoordinate(const Vec3 &bary) const
   {
-    float t = 1.0f - bary.x() - bary.z();
+    Real t = 1.0f - bary.x() - bary.z();
 
     return Vec3(t * _verts[0].x() + bary.x() * _verts[1].x() + bary.z()*_verts[2].x(),
                 t * _verts[0].y() + bary.x() * _verts[1].y() + bary.z()*_verts[2].y(),
@@ -1004,27 +1109,27 @@ public:
     // 2+----+1
     Vec3 b = baryCoordinate(v);
     return
-      (b.x() >= 0.0f && b.x() <= 1.0f) &&
-      (b.z() >= 0.0f && b.z() <= 1.0f) &&
-      b.x() + b.z() <= 1.01f;
+      (b.x() >= (Real)0.0 && b.x() <= (Real)1.0) &&
+      (b.z() >= (Real)0.0 && b.z() <= (Real)1.0) &&
+      b.x() + b.z() <= (Real)1.01;
   }
 
   Vec3 closestPoint(const Vec3 &v) const
   {
     Vec3 bary = baryCoordinate(v);
-    float u = clamp(1.0f - bary.x() - bary.z(), 1.0f);
-    bary.setX(clamp(bary.x(), 1.0f));
-    bary.setY(clamp(bary.y(), 0.0f));
-    bary.setZ(clamp(bary.z(), 1.0f - bary.x() - u));
+    Real u = clamp(1.0 - bary.x() - bary.z(), 1.0);
+    bary.setX(clamp(bary.x(), (Real)1.0));
+    bary.setY(clamp(bary.y(), (Real)0.0));
+    bary.setZ(clamp(bary.z(), (Real)(1.0 - bary.x() - u)));
     return cartCoordinate(bary);
   }
 
-  float distanceTo(const Vec3 &v) const
+  Real distanceTo(const Vec3 &v) const
   {
     return (v - closestPoint(v)).magnitude();
   }
 
-  float distanceToSquared(const Vec3 &v) const
+  Real distanceToSquared(const Vec3 &v) const
   {
     return (v - closestPoint(v)).magnitude_squared();
   }
@@ -1054,9 +1159,9 @@ public:
     _matrix.set(3, 3, 1);
   }
 
-  float x() const { return position().x(); }
-  float y() const { return position().y(); }
-  float z() const { return position().z(); }
+  Real x() const { return position().x(); }
+  Real y() const { return position().y(); }
+  Real z() const { return position().z(); }
 
   void setMatrix(const Matrix &m)
   {
@@ -1093,14 +1198,14 @@ public:
 
   //const Vec3 &angle() const { return _angle; }
 
-  float yaw() const { return M_PI + acosf(Vec3::X.dot(right())); }
+  Real yaw() const { return M_PI + acosr(Vec3::X.dot(right())); }
 
   /*
-  float pitch() const { return _angle.x(); }
-  float setPitch(float n) { _angle.setX(n); updateDirections(); }
-  float setYaw(float n) { _angle.setY(n); updateDirections(); }
-  float roll() const { return _angle.z(); }
-  float setRoll(float n) { _angle.setZ(n); updateDirections(); }
+  Real pitch() const { return _angle.x(); }
+  Real setPitch(Real n) { _angle.setX(n); updateDirections(); }
+  Real setYaw(Real n) { _angle.setY(n); updateDirections(); }
+  Real roll() const { return _angle.z(); }
+  Real setRoll(Real n) { _angle.setZ(n); updateDirections(); }
   */
 
   virtual void lookAt(const Vec3 &forward, const Vec3 &up)
@@ -1151,11 +1256,11 @@ public:
 
   Matrix translationMatrix() const
   {
-    //float n = negate ? -1.0f : 1.0f;
+    //Real n = negate ? -1.0 : 1.0;
     return Matrix::translation(position());
   }
 
-  Vec3 focalPoint(float render_distance_ratio) const
+  Vec3 focalPoint(Real render_distance_ratio) const
   {
     return position() + forward() * render_distance_ratio * 0.5f;
   }
@@ -1173,7 +1278,7 @@ public:
   bool wouldClip(const Vec3 &point) const
   {
     Vec3 v = matrix().invert() * point;
-    return v.z() > 0.0f;
+    return v.z() > 0.0;
   }
 };
 
@@ -1196,7 +1301,7 @@ public:
 
   void setAngles(const Vec3 &angles)
   {
-    _angles = angles.clamp(Vec3(-M_PI/2.0f, -INFINITY, -INFINITY), Vec3(M_PI/2.0f, INFINITY, INFINITY));
+    _angles = angles.clamp(Vec3(-M_PI/2.0, -INFINITY, -INFINITY), Vec3(M_PI/2.0, INFINITY, INFINITY));
     updateMatrix();
   }
 
@@ -1209,9 +1314,9 @@ public:
   {
     Matrix m(Matrix::lookAt(forward, up));
     _plane = up;
-    setAngles(Vec3(atan2f(m.get(2,1), m.get(2,2)),
-                   atan2f(-m.get(2,0), sqrt(m.get(2,1)*m.get(2,1)+m.get(2,2)*m.get(2,2))),
-                   M_PI + atan2f(m.get(1,0), m.get(0, 0))));
+    setAngles(Vec3(atan2r(m.get(2,1), m.get(2,2)),
+                   atan2r(-m.get(2,0), sqrtr(m.get(2,1)*m.get(2,1)+m.get(2,2)*m.get(2,2))),
+                   M_PI + atan2r(m.get(1,0), m.get(0, 0))));
   }
 
   void updateMatrix()
@@ -1252,19 +1357,19 @@ public:
   void bindMaterial(GLenum face, const Material &m)
   {
     glMateriali(face, GL_SHININESS, m.shininess());
-    glMaterialfv(face, GL_SPECULAR, m.specular());
-    glMaterialfv(face, GL_EMISSION, m.emission());
-    glMaterialfv(face, GL_AMBIENT, m.ambient());
-    glMaterialfv(face, GL_DIFFUSE, m.diffuse());
+    glMaterialrv(face, GL_SPECULAR, m.specular());
+    glMaterialrv(face, GL_EMISSION, m.emission());
+    glMaterialrv(face, GL_AMBIENT, m.ambient());
+    glMaterialrv(face, GL_DIFFUSE, m.diffuse());
   }
 
   void unbindMaterial(GLenum face)
   {
     glMateriali(face, GL_SHININESS, 127);
-    glMaterialfv(face, GL_SPECULAR, Colors::White);
-    glMaterialfv(face, GL_EMISSION, Colors::Black);
-    glMaterialfv(face, GL_AMBIENT, Colors::Black);
-    glMaterialfv(face, GL_DIFFUSE, Colors::White);
+    glMaterialrv(face, GL_SPECULAR, Colors::White);
+    glMaterialrv(face, GL_EMISSION, Colors::Black);
+    glMaterialrv(face, GL_AMBIENT, Colors::Black);
+    glMaterialrv(face, GL_DIFFUSE, Colors::White);
   }
 
   unsigned int findTextureHandle(const Texture &tex)
@@ -1351,26 +1456,26 @@ public:
   void renderCameraAxis(const Camera &camera)
   {
     glBegin(GL_LINES);
-    glColor3fv(Colors::Red);
-    glVertex3fv(camera.position() + camera.right() * 1024);
-    glVertex3fv(camera.position());
-    glColor3fv(Colors::Green);
-    glVertex3fv(camera.position() + camera.up() * 1024);
-    glVertex3fv(camera.position());
-    glColor3fv(Colors::Blue);
-    glVertex3fv(camera.position() + camera.forward() * 1024);
-    glVertex3fv(camera.position());
+    glColor3rv(Colors::Red);
+    glVertex3rv(camera.position() + camera.right() * 1024);
+    glVertex3rv(camera.position());
+    glColor3rv(Colors::Green);
+    glVertex3rv(camera.position() + camera.up() * 1024);
+    glVertex3rv(camera.position());
+    glColor3rv(Colors::Blue);
+    glVertex3rv(camera.position() + camera.forward() * 1024);
+    glVertex3rv(camera.position());
 
 
-    glColor3fv(Colors::Yellow);
-    glVertex3fv(camera.position() + Vec3(1, 0, 0) * 1024);
-    glVertex3fv(camera.position());
-    glColor3fv(Colors::Cyan);
-    glVertex3fv(camera.position() + Vec3(0, 1, 0) * 1024);
-    glVertex3fv(camera.position());
-    glColor3fv(Colors::Magenta);
-    glVertex3fv(camera.position() + Vec3(0, 0, 1) * 1024);
-    glVertex3fv(camera.position());
+    glColor3rv(Colors::Yellow);
+    glVertex3rv(camera.position() + Vec3(1, 0, 0) * 1024);
+    glVertex3rv(camera.position());
+    glColor3rv(Colors::Cyan);
+    glVertex3rv(camera.position() + Vec3(0, 1, 0) * 1024);
+    glVertex3rv(camera.position());
+    glColor3rv(Colors::Magenta);
+    glVertex3rv(camera.position() + Vec3(0, 0, 1) * 1024);
+    glVertex3rv(camera.position());
 
     glEnd();
   }
@@ -1378,23 +1483,23 @@ public:
   void renderOriginAxis()
   {
     glBegin(GL_LINES);
-    glColor3fv(Colors::Red);
-    glVertex3f(1024, 0, 0);
-    glVertex3f(0, 0, 0);
-    glColor3fv(Colors::Green);
-    glVertex3f(0, 1024, 0);
-    glVertex3f(0, 0, 0);
-    glColor3fv(Colors::Blue);
-    glVertex3f(0, 0, 1024);
-    glVertex3f(0, 0, 0);
+    glColor3rv(Colors::Red);
+    glVertex3r(1024, 0, 0);
+    glVertex3r(0, 0, 0);
+    glColor3rv(Colors::Green);
+    glVertex3r(0, 1024, 0);
+    glVertex3r(0, 0, 0);
+    glColor3rv(Colors::Blue);
+    glVertex3r(0, 0, 1024);
+    glVertex3r(0, 0, 0);
     glEnd();
   }
 
   void renderAxis(const Vec3 &origin, const Vec3 &right = Vec3::X, const Vec3 &up = Vec3::Y)
   {
     glPushMatrix(); {
-      glMultMatrixf(Matrix::translation(origin));
-      glMultMatrixf(Matrix::lookAt(up.cross(right), up));
+      glMultMatrixr(Matrix::translation(origin));
+      glMultMatrixr(Matrix::lookAt(up.cross(right), up));
       // todo rotate to fit right
 
       renderOriginAxis();
@@ -1404,20 +1509,20 @@ public:
 
   void renderVector(const Vec3 &origin, const Vec3 &v, const Vec3 &color = Colors::White)
   {
-    glLineWidth(16.0f);
-    glColor3fv(color);
+    glLineWidth(16.0);
+    glColor3rv(color);
     glBegin(GL_LINES);
-    glVertex3fv(origin);
-    glVertex3fv(origin + v);
+    glVertex3rv(origin);
+    glVertex3rv(origin + v);
     glEnd();
   }
 
   void renderNormal(const Vec3 &origin, const Vec3 &normal, const Vec3 &color = Colors::Green)
   {
-    renderVector(origin, normal * 512.0f, color);
+    renderVector(origin, normal * 512.0, color);
   }
 
-  void renderPole(const Camera &cam, const Vec3 &position, float value, const Vec3 &color)
+  void renderPole(const Camera &cam, const Vec3 &position, Real value, const Vec3 &color)
   {
     renderVector(position, Vec3(0, 1, 0) * value, color);
   }
@@ -1425,8 +1530,8 @@ public:
   void renderPoint(const Vec3 &position, const Vec3 &color = Colors::White)
   {
     glBegin(GL_POINTS);
-    glColor4fv(color);
-    glVertex3fv(position);
+    glColor4rv(color);
+    glVertex3rv(position);
     glEnd();
   }
 
@@ -1434,9 +1539,9 @@ public:
   {
     glLineWidth(4);
     glBegin(GL_LINES);
-    glColor3fv(color);
-    glVertex3fv(a);
-    glVertex3fv(b);
+    glColor3rv(color);
+    glVertex3rv(a);
+    glVertex3rv(b);
     glEnd();
   }
 };
@@ -1471,7 +1576,7 @@ public:
 
     Vec3 center() const
     {
-      return (vertex(0) + vertex(1) + vertex(2)) / 3.0f;
+      return (vertex(0) + vertex(1) + vertex(2)) / 3.0;
     }
   };
 
@@ -1482,10 +1587,10 @@ private:
 
   Vec3 _points[NumPoints];
   Face _faces[NumFaces];
-  float _radius;
+  Real _radius;
 
 public:
-  Icosahedron(float radius = 1.0f)
+  Icosahedron(Real radius = 1.0)
     : _radius(radius)
   {
     generate();
@@ -1499,7 +1604,7 @@ public:
 
   void generatePoints()
   {
-    float one = 1.0f, psi = (1.0f + sqrt(5.0f)) / 2.0f;
+    Real one = 1.0, psi = (1.0 + sqrt(5.0)) / 2.0;
 
     _points[0] = Vec3(0, one, psi);
     _points[1] = Vec3(0, -one, psi);
@@ -1566,7 +1671,7 @@ public:
     return face(PointNeighborIndex[f][point][neighbor]);
   }
 
-  float radius() const { return _radius; }
+  Real radius() const { return _radius; }
 };
 
 const int Icosahedron::NeighborIndex[NumFaces][3] = {
@@ -1739,12 +1844,12 @@ public:
 
     for(int i = 0; i < Icosahedron::NumFaces; i++) {
       const Icosahedron::Face &face = iso.face(i);
-      glNormal3fv(face.vertex(0).normalize());
-      glVertex3fv(face.vertex(0));
-      glNormal3fv(face.vertex(1).normalize());
-      glVertex3fv(face.vertex(1));
-      glNormal3fv(face.vertex(2).normalize());
-      glVertex3fv(face.vertex(2));
+      glNormal3rv(face.vertex(0).normalize());
+      glVertex3rv(face.vertex(0));
+      glNormal3rv(face.vertex(1).normalize());
+      glVertex3rv(face.vertex(1));
+      glNormal3rv(face.vertex(2).normalize());
+      glVertex3rv(face.vertex(2));
     }
 
     glEnd();
@@ -1753,15 +1858,15 @@ public:
   void renderNeighbors(const Camera &cam, const Icosahedron &iso)
   {
     glPushMatrix(); {
-      glScalef(1.01f, 1.01f, 1.01f);
+      glScalef(1.01, 1.01, 1.01);
 
       glBegin(GL_LINES);
       for(int face = 0; face < Icosahedron::NumFaces; face++) {
         for(int n = 0; n < 3; n++) {
-          glColor3fv(Colors::Black);
-          glVertex3fv(iso.face(face).center());
-          glColor3fv(Colors::color(n));
-          glVertex3fv(iso.neighbor(face, n).center());
+          glColor3rv(Colors::Black);
+          glVertex3rv(iso.face(face).center());
+          glColor3rv(Colors::color(n));
+          glVertex3rv(iso.neighbor(face, n).center());
         }
       }
       glEnd();
@@ -1771,15 +1876,15 @@ public:
   void renderPointNeighbors(const Camera &cam, const Icosahedron &iso, int point)
   {
     glPushMatrix(); {
-      glScalef(1.01f, 1.01f, 1.01f);
+      glScalef(1.01, 1.01, 1.01);
 
       glBegin(GL_LINES);
       for(int face = 0; face < Icosahedron::NumFaces; face++) {
         for(int n = 0; n < 3; n++) {
-          glColor3fv(Colors::Black);
-          glVertex3fv(iso.face(face).vertex(point));
-          glColor3fv(Colors::color(n));
-          glVertex3fv(iso.pointNeighbor(face, point, n).center());
+          glColor3rv(Colors::Black);
+          glVertex3rv(iso.face(face).vertex(point));
+          glColor3rv(Colors::color(n));
+          glVertex3rv(iso.pointNeighbor(face, point, n).center());
         }
       }
       glEnd();
@@ -1820,17 +1925,17 @@ public:
     Vec3 dir(0, 0, 0, 0);
 
     if(isMovingForward())
-      dir += Vec3(0.0f, 0.0f, -1.0f);
+      dir += Vec3(0.0, 0.0, -1.0);
     if(isMovingBackward())
-      dir += Vec3(0.0f, 0.0f, 1.0f);
+      dir += Vec3(0.0, 0.0, 1.0);
     if(isMovingLeft())
-      dir += Vec3(-1.0f, 0.0f, 0.0f);
+      dir += Vec3(-1.0, 0.0, 0.0);
     if(isMovingRight())
-      dir += Vec3(1.0f, 0.0f, 0.0f);
+      dir += Vec3(1.0, 0.0, 0.0);
     if(isMovingUp())
-      dir += Vec3(0.0f, 1.0f, 0.0f);
+      dir += Vec3(0.0, 1.0, 0.0);
     if(isMovingDown())
-      dir += Vec3(0.0f, -1.0f, 0.0f);
+      dir += Vec3(0.0, -1.0, 0.0);
 
     return dir.normalize();
   }
@@ -1865,10 +1970,10 @@ namespace XPad
 class Quantum
 {
   Vec3 _position, _velocity, _color;
-  float _scale, _mass;
+  Real _scale, _mass;
 
 public:
-  Quantum(const Vec3 &position, const Vec3 &velocity, float scale = 100, const Vec3 &color = Colors::White, float mass = 1.0f)
+  Quantum(const Vec3 &position, const Vec3 &velocity, Real scale = 100, const Vec3 &color = Colors::White, Real mass = 1.0)
     : _position(position), _velocity(velocity), _color(color), _scale(scale), _mass(mass)
   {
   }
@@ -1879,12 +1984,12 @@ public:
   Quantum &setVelocity(const Vec3 &v) { _velocity = v; return *this; }
   const Vec3 &color() const { return _color; }
   Quantum &setColor(const Vec3 &c) { _color = c; return *this; }
-  float mass() const { return _mass; }
-  Quantum &setMass(float m) { _mass = m; return *this; }
+  Real mass() const { return _mass; }
+  Quantum &setMass(Real m) { _mass = m; return *this; }
 
-  float universeSize() const { return _scale; }
+  Real universeSize() const { return _scale; }
 
-  virtual void update(float dt)
+  virtual void update(Real dt)
   {
     Vec3 r = (_position + _velocity * dt);
 
@@ -1920,11 +2025,11 @@ class Quanta
 {
   typedef std::vector<Quantum *> vector;
   vector _quanta;
-  float _quantum_radius;
+  Real _quantum_radius;
   bool _swap_color;
 
 public:
-  Quanta(float quantum_radius)
+  Quanta(Real quantum_radius)
     : _quantum_radius(quantum_radius), _swap_color(false)
   {
   }
@@ -1952,7 +2057,7 @@ public:
   }
 
   int size() const { return _quanta.size(); }
-  float quantum_radius() const { return _quantum_radius; }
+  Real quantum_radius() const { return _quantum_radius; }
 
   bool swapColor() const {
     return _swap_color;
@@ -1962,9 +2067,9 @@ public:
     return _swap_color = yes;
   }
 
-  virtual void update(float dt)
+  virtual void update(Real dt)
   {
-    typedef std::pair<float, int> collision_t;
+    typedef std::pair<Real, int> collision_t;
     struct collision_compare: public std::less<collision_t>
     {
        bool operator() (const collision_t &a, const collision_t &b) {
@@ -1986,7 +2091,7 @@ public:
 
       for(int j = 0; j < size(); j++) {
         if(i != j && seen[i] != true && seen[j] != true) {
-          float t = collidesAt((*this)[i], (*this)[j], dt);
+          Real t = collidesAt((*this)[i], (*this)[j], dt);
           if(!isnan(t)) {
             colliders.insert(collision_t(t, j));
           }
@@ -1994,11 +2099,11 @@ public:
       }
 
       // update position and velocity
-      float t_remaining = dt;
+      Real t_remaining = dt;
 
       if(colliders.size() > 0) {
         for(auto c: colliders) { // todo verify positioning and timing of 2nd and subsequent collision
-          float t = collidesAt((*this)[i], (*this)[c.second], t_remaining);
+          Real t = collidesAt((*this)[i], (*this)[c.second], t_remaining);
           if(!isnan(t)) {
             collide((*this)[i], (*this)[c.second], t, t_remaining);
             t_remaining -= t;
@@ -2014,16 +2119,16 @@ public:
     delete[] seen;
   }
 
-  float collidesAt(const Quantum &a, const Quantum &b, float dt)
+  Real collidesAt(const Quantum &a, const Quantum &b, Real dt)
   {
     Vec3 dp = (a.position() - b.position());
-    float dist = dp.magnitude();
+    Real dist = dp.magnitude();
     Vec3 dv = (a.velocity() - b.velocity());
-    float rel_speed = dv.magnitude();
+    Real rel_speed = dv.magnitude();
 
     // quick escapes
-    if((dp / dist).dot(dv / rel_speed) > 0.0f ||
-       (dist - 2.0f*_quantum_radius) > rel_speed) {
+    if((dp / dist).dot(dv / rel_speed) > 0.0 ||
+       (dist - 2.0*_quantum_radius) > rel_speed) {
       //std::cerr << "No collision between " << a.position() << ":" << a.velocity() << " and " << b.position() << ":" << b.velocity() << "? " << (dp / dist).dot(dv / rel_speed) << "\t" << (a.position() - b.position()).magnitude() << std::endl;
       return NAN;
     }
@@ -2033,26 +2138,26 @@ public:
     // av^2 t^2 - 2*av*bv*t^2 + bv^2 * t^2 - 2 * av*bx*t - 2*ax*bv*t + 2*bv *bx*t + 2*av*ax*t + ax^2 + bx^2  - 2*ax*bx
     // t^2(av^2 - 2*av*bv + bv^2) + t(-2 * av*bx* - 2*ax*bv* + 2*bv *bx* + 2*av*ax) + (ax^2 + bx^2  - 2*ax*bx)
 
-    Vec3 iv = a.position() * a.position() - 2.0f * a.position() * b.position() + b.position() * b.position();
-    Vec3 jv = 2.0f*a.position() * a.velocity() - 2.0f * a.position() * b.velocity() - 2.0f * b.position() * a.velocity() + 2.0f * b.position() * b.velocity();
-    Vec3 kv = a.velocity() * a.velocity() - 2.0f * a.velocity() * b.velocity() + b.velocity() * b.velocity();
+    Vec3 iv = a.position() * a.position() - 2.0 * a.position() * b.position() + b.position() * b.position();
+    Vec3 jv = 2.0*a.position() * a.velocity() - 2.0 * a.position() * b.velocity() - 2.0 * b.position() * a.velocity() + 2.0 * b.position() * b.velocity();
+    Vec3 kv = a.velocity() * a.velocity() - 2.0 * a.velocity() * b.velocity() + b.velocity() * b.velocity();
 
     // All that was for a distance squared formula, so add the components up.
-    float i = -4.0f * _quantum_radius * _quantum_radius + iv.x() + iv.y() + iv.z();
-    float j = jv.x() + jv.y() + jv.z();
-    float k = kv.x() + kv.y() + kv.z();
+    Real i = -4.0 * _quantum_radius * _quantum_radius + iv.x() + iv.y() + iv.z();
+    Real j = jv.x() + jv.y() + jv.z();
+    Real k = kv.x() + kv.y() + kv.z();
 
     // quadratic equation
-    float bac = j*j - 4.0*i*k;
-    if(bac < 0.0f) {
+    Real bac = j*j - 4.0*i*k;
+    if(bac < 0.0) {
       return NAN;
     }
 
-    float tp = (-j + sqrt(bac)) / (2.0*k);
-    float tm = (-j - sqrt(bac)) / (2.0*k);
+    Real tp = (-j + sqrt(bac)) / (2.0*k);
+    Real tm = (-j - sqrt(bac)) / (2.0*k);
 
     // pick the t
-    if((isnan(tp) || tp < 0.0f || tp > dt) && (isnan(tm) || tm < 0.0f || tm > dt)) {
+    if((isnan(tp) || tp < 0.0 || tp > dt) && (isnan(tm) || tm < 0.0 || tm > dt)) {
       //std::cerr << "No collision between " << a.position() << ":" << a.velocity() << " and " << b.position() << ":" << b.velocity() << "? " << tp << " " << tm << minimum(tp, tm) << "\t" << (a.position() - b.position()).magnitude() << std::endl;
       return NAN;
     }
@@ -2062,7 +2167,7 @@ public:
     return minimum(tp, tm);
   }
 
-  bool collide(Quantum &a, Quantum &b, float t, float dt)
+  bool collide(Quantum &a, Quantum &b, Real t, Real dt)
   {
     Vec3 ac = a.position() + a.velocity() * t;
     Vec3 bc = b.position() + b.velocity() * t;
@@ -2076,16 +2181,16 @@ public:
 #else
     // courtesy of http://www.gamasutra.com/view/feature/131424/pool_hall_lessons_fast_accurate_.php
     Vec3 n = (ac - bc).normalize();
-    float aa = a.velocity().dot(n);
-    float ab = b.velocity().dot(n);
-    float p = (2.0f * (aa - ab)) / (a.mass() + b.mass());
+    Real aa = a.velocity().dot(n);
+    Real ab = b.velocity().dot(n);
+    Real p = (2.0 * (aa - ab)) / (a.mass() + b.mass());
     Vec3 va = a.velocity() - p * b.mass() * n;
     Vec3 vb = b.velocity() + p * a.mass() * n;
 #endif
 
     if(va.isNaN() || vb.isNaN()) return false;
 
-    warn(((a.mass()*a.velocity() + b.mass()*b.velocity()) - (a.mass()*va + b.mass()*vb)).magnitude() <= 0.01f);
+    warn(((a.mass()*a.velocity() + b.mass()*b.velocity()) - (a.mass()*va + b.mass()*vb)).magnitude() <= 0.01);
 
     a.setVelocity(va);
     a.setPosition(ac);
@@ -2117,16 +2222,16 @@ public:
   Renderer &_renderer;
 
   QuantaRenderer(Renderer &renderer)
-    : _icosa(1.0f), _icosa_ren(renderer), _renderer(renderer)
+    : _icosa(1.0), _icosa_ren(renderer), _renderer(renderer)
   {
   }
 
-  void render(const Camera &camera, const Quantum &quantum, float radius, float alpha = 1.0f)
+  void render(const Camera &camera, const Quantum &quantum, Real radius, Real alpha = 1.0)
   {
      glPushMatrix();
-     glTranslatef(quantum.position().x(), quantum.position().y(), quantum.position().z());
-     glScalef(radius, radius, radius);
-     glColor3fv(quantum.color().abs() * Vec3(1.0f, 1.0f, 1.0f, alpha));
+     glTranslater(quantum.position().x(), quantum.position().y(), quantum.position().z());
+     glScaler(radius, radius, radius);
+     glColor3rv(quantum.color().abs() * Vec3(1.0, 1.0, 1.0, alpha));
      _icosa_ren.render(camera, _icosa);
      glPopMatrix();
   }
@@ -2136,9 +2241,9 @@ public:
     for(int i = 0; i < quanta.size(); i++) {
       Quantum q = quanta[i];
       glPushMatrix(); {
-        glTranslatef(q.position().x(), q.position().y(), q.position().z());
-        glScalef(quanta.quantum_radius(), quanta.quantum_radius(), quanta.quantum_radius());
-        glColor3fv(q.color().abs());
+        glTranslater(q.position().x(), q.position().y(), q.position().z());
+        glScaler(quanta.quantum_radius(), quanta.quantum_radius(), quanta.quantum_radius());
+        glColor3rv(q.color().abs());
         _icosa_ren.render(camera, _icosa);
       } glPopMatrix();
     }
@@ -2291,31 +2396,32 @@ int main(int argc, char *argv[])
 {
   unsigned int frames = 0, ms_per_frame = 0, frame_start = 0;
   int joystick_index = 0;
-  float near_plane = 4.0f, far_plane = 1024.0f * 8.0f;
-  Vec3 min_position(-2048, -2048, -2048), max_position(2048, 2048, 2048);
-  Vec3 min_speed(-10, -10, -10), max_speed(10, 10, 10);
-  int num_quanta = 1024, universe_size = 2048, generation = 0;
-  float quantum_speed = 0.0f, quantum_forward_speed = 0.0f, quantum_radius = 0.5f, quantum_mass = 1.0f;
+  Real near_plane = 4.0, far_plane = 1024.0 * 8.0;
+  int num_quanta = 125, universe_size = 2048, generation = 0;
+  Real quantum_speed = 0.0, quantum_forward_speed = 0.0, quantum_radius = 0.5f, quantum_mass = 1.0;
+  Real mp = quantum_radius * 2.5f;
+  Vec3 min_position(-mp, -mp, -mp), max_position(mp, mp, mp);
 
   if(argc > 1) {
     num_quanta = atoi(argv[1]);
   }
   if(argc > 2) {
-    float n = atof(argv[2]);
+    Real n = ator(argv[2]);
     min_position = Vec3(-n, -n, -n);
     max_position = Vec3(n, n, n);
   }
   if(argc > 3) {
-    universe_size = atof(argv[3]);;
+    universe_size = ator(argv[3]);;
   }
   if(argc > 4) {
-    float n = atof(argv[4]);
+    Real n = ator(argv[4]);
     quantum_speed = n;
-    min_speed = Vec3(-n, -n, -n);
-    max_speed = Vec3(n, n, n);
   }
   if(argc > 5) {
-    quantum_radius = atof(argv[5]);
+    quantum_radius = ator(argv[5]);
+  }
+  if(argc > 6) {
+    quantum_mass = ator(argv[6]);
   }
 
   if(SDL_Init(SDL_INIT_VIDEO|SDL_INIT_JOYSTICK) != 0) {
@@ -2375,44 +2481,36 @@ int main(int argc, char *argv[])
   /*
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  glOrtho(0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 100.0f);
+  glOrtho(0.0, 0.0, 1.0, 1.0, 0.0, 100.0);
 
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
 
   glEnable(GL_TEXTURE_2D);
-  float w = 1.0f, h = 1.0f;
+  Real w = 1.0, h = 1.0;
   renderer.bindTexture(logo);
 
   glBegin(GL_QUADS);
-  glTexCoord2f(0.0f, 0.0f);
-  glVertex2f(-1.0f, -1.0f);
-  glTexCoord2f(0.0f, h);
-  glVertex2f(-1.0f, 1.0f);
+  glTexCoord2f(0.0, 0.0);
+  glVertex2f(-1.0, -1.0);
+  glTexCoord2f(0.0, h);
+  glVertex2f(-1.0, 1.0);
   glTexCoord2f(w, h);
-  glVertex2f(1.0f, 1.0f);
-  glTexCoord2f(w, 0.0f);
-  glVertex2f(1.0f, -1.0f);
+  glVertex2f(1.0, 1.0);
+  glTexCoord2f(w, 0.0);
+  glVertex2f(1.0, -1.0);
   glEnd();
 
   renderer.unbindTexture();
   SDL_GL_SwapWindow(window);
   */
 
-  float spawn_height = 0.0f; //-3016.0f;
+  Real spawn_height = 0.0; //-3016.0;
   FPSCamera fps_camera(Vec3(0, spawn_height, 0), Vec3());
   Camera *camera = &fps_camera;
   Camera *view_camera = camera;
 
   Quanta quanta(quantum_radius);
-/*
-  for(int i = 0; i < num_quanta; i++) {
-    quanta.push_back(Quantum(Vec3::random(min_position, max_position),
-                             Vec3::random(min_speed, max_speed),
-                             universe_size,
-                             Colors::color(i)));
-  }
-*/
   QuantaRenderer quanta_renderer(renderer);
 
   PlayerCommandState player_command_state;
@@ -2437,10 +2535,10 @@ int main(int argc, char *argv[])
 
   /*
   glEnable(GL_FOG);
-  glFogfv(GL_FOG_COLOR, Colors::Black);
+  glFogrv(GL_FOG_COLOR, Colors::Black);
   glFogi(GL_FOG_MODE, GL_LINEAR);
   glFogi(GL_FOG_START, near_plane);
-  glFogi(GL_FOG_END, far_plane / 2.0f);
+  glFogi(GL_FOG_END, far_plane / 2.0);
   */
   
   glEnable(GL_LIGHTING);
@@ -2449,29 +2547,29 @@ int main(int argc, char *argv[])
   glShadeModel(GL_SMOOTH);
   glEnable(GL_COLOR_MATERIAL);
 
-  //glLightModelfv(GL_LIGHT_MODEL_AMBIENT, s.sky());
+  //glLightModelrv(GL_LIGHT_MODEL_AMBIENT, s.sky());
   //glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
 
-  Vec3 light_color(1.0f, 1.0f, 1.0f);
-  glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 0.1f); //brightness);
-  glLightfv(GL_LIGHT0, GL_DIFFUSE, light_color);
-  glLightfv(GL_LIGHT0, GL_SPECULAR, Colors::White);
-  glLightfv(GL_LIGHT0, GL_AMBIENT, light_color * 0.01f);
+  Vec3 light_color(1.0, 1.0, 1.0);
+  glLightr(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 0.1); //brightness);
+  glLightrv(GL_LIGHT0, GL_DIFFUSE, light_color);
+  glLightrv(GL_LIGHT0, GL_SPECULAR, Colors::White);
+  glLightrv(GL_LIGHT0, GL_AMBIENT, light_color * 0.01);
 
   glEnable(GL_LIGHT0);
 
-  float speed = 16.0f;
-  float droll = 0.0f, dpitch = 0.0f, dyaw = 0.0f;
+  Real speed = 16.0;
+  Real droll = 0.0, dpitch = 0.0, dyaw = 0.0;
 
   //Vec3 joy_sensitivity(50, 50, 150);
   Vec3 joy_sensitivity(0.8, 0.8, 0.25);
-  float joy_pitch = NAN, joy_yaw = NAN, joy_roll = NAN;
+  Real joy_pitch = NAN, joy_yaw = NAN, joy_roll = NAN;
 
   ScreenShooter screen_shooter(window_width, window_height);
 
   while(!done) {
     frame_start = SDL_GetTicks();
-    droll = dpitch = dyaw = 0.0f;
+    droll = dpitch = dyaw = 0.0;
 
     while(SDL_PollEvent(&event)) {
       switch(event.type) {
@@ -2517,11 +2615,11 @@ int main(int argc, char *argv[])
           break;
         case SDL_SCANCODE_Q:
         case SDL_SCANCODE_PAGEDOWN:
-          droll = 1.0f * 2.0f * M_PI / 360.0f;
+          droll = 1.0 * 2.0 * M_PI / 360.0;
           break;
         case SDL_SCANCODE_E:
         case SDL_SCANCODE_PAGEUP:
-          droll = -(1.0f * 2.0f * M_PI / 360.0f);
+          droll = -(1.0 * 2.0 * M_PI / 360.0);
           break;
         case SDL_SCANCODE_R:
           if(event.type == SDL_KEYDOWN) {
@@ -2536,7 +2634,7 @@ int main(int argc, char *argv[])
           }
           break;
         case SDL_SCANCODE_F1:
-          std::cout << "FPS: " << frames << " " << SDL_GetTicks() / 1000.0f << "\t" << frames / ((float)SDL_GetTicks() / 1000.0f) << "\t" << 1.0f / (ms_per_frame / 1000.0f) << std::endl;
+          std::cout << "FPS: " << frames << " " << SDL_GetTicks() / 1000.0 << "\t" << frames / ((Real)SDL_GetTicks() / 1000.0) << "\t" << 1.0 / (ms_per_frame / 1000.0) << std::endl;
           break;
         case SDL_SCANCODE_F3:
           break;
@@ -2610,25 +2708,25 @@ int main(int argc, char *argv[])
           break;
         case SDL_SCANCODE_EQUALS:
           if(event.type == SDL_KEYDOWN) {
-            quantum_speed += 0.1f;
+            quantum_speed += 0.1;
             std::cout << "Quantum speed: " << quantum_speed << std::endl;
           }
           break;
         case SDL_SCANCODE_MINUS:
           if(event.type == SDL_KEYDOWN) {
-            quantum_speed -= 0.1f;
+            quantum_speed -= 0.1;
             std::cout << "Quantum speed: " << quantum_speed << std::endl;
           }
           break;
         case SDL_SCANCODE_U:
           if(event.type == SDL_KEYDOWN) {
-            quantum_mass -= 1.0f;
+            quantum_mass -= 1.0;
             std::cout << "Quantum mass: " << quantum_mass << std::endl;
           }
           break;
         case SDL_SCANCODE_I:
           if(event.type == SDL_KEYDOWN) {
-            quantum_mass += 1.0f;
+            quantum_mass += 1.0;
             std::cout << "Quantum mass: " << quantum_mass << std::endl;
           }
           break;
@@ -2646,13 +2744,13 @@ int main(int argc, char *argv[])
           break;
         case SDL_SCANCODE_P:
           if(event.type == SDL_KEYDOWN) {
-            quantum_forward_speed += 0.1f;
+            quantum_forward_speed += 0.1;
             std::cout << "Quantum forward speed: " << quantum_forward_speed << std::endl;
           }
           break;
         case SDL_SCANCODE_O:
           if(event.type == SDL_KEYDOWN) {
-            quantum_forward_speed -= 0.1f;
+            quantum_forward_speed -= 0.1;
             std::cout << "Quantum forward speed: " << quantum_forward_speed << std::endl;
           }
           break;
@@ -2661,7 +2759,7 @@ int main(int argc, char *argv[])
             Vec3 color = Colors::color(generation++);
             for(int i = 0; i < num_quanta; i++) {
               quanta.push_back(new Quantum(camera->forward() * near_plane * 1.5f + camera->position() + Vec3::random(min_position, max_position),
-                                       quantum_forward_speed * camera->forward() + quantum_speed * Vec3::random(min_speed, max_speed).normalize(),
+                                       quantum_forward_speed * camera->forward() + quantum_speed * Vec3::random(),
                                        universe_size,
                                        color,
                                        quantum_mass));
@@ -2671,13 +2769,13 @@ int main(int argc, char *argv[])
         case SDL_SCANCODE_L:
           if(event.type == SDL_KEYDOWN) {
             Vec3 color = Colors::color(generation++);
-            float d = (max_position - min_position).magnitude();
-            float maxq = powf(num_quanta, 1.0f/3.0f);
+            Real d = (max_position - min_position).magnitude();
+            Real maxq = powf(num_quanta, 1.0/3.0);
             for(int x = 0; x < maxq; x++) {
               for(int y = 0; y < maxq; y++) {
                 for(int z = 0; z < maxq; z++) {
                   quanta.push_back(new Quantum(camera->forward() * near_plane * 1.5f + camera->position() + (Vec3(x, y, z) / maxq * d - d / 2),
-                                               quantum_forward_speed * camera->forward() + quantum_speed * Vec3::random(min_speed, max_speed).normalize(),
+                                               quantum_forward_speed * camera->forward() + quantum_speed * Vec3::random(),
                                                universe_size,
                                                color,
                                                quantum_mass));
@@ -2704,8 +2802,8 @@ int main(int argc, char *argv[])
 #else
         if(event.motion.state & SDL_BUTTON_RMASK) {
 #endif /* MAC */
-          dyaw -= event.motion.xrel * 2.0f * M_PI / 360.0f;
-          dpitch -= event.motion.yrel * 2.0f * M_PI / 360.0f;
+          dyaw -= event.motion.xrel * 2.0 * M_PI / 360.0;
+          dpitch -= event.motion.yrel * 2.0 * M_PI / 360.0;
           //std::cout << "MouseMotion: " << event.motion.xrel << "\t" << event.motion.yrel << endl;
         }
         break;
@@ -2734,17 +2832,17 @@ int main(int argc, char *argv[])
         break;
       case SDL_MOUSEWHEEL:
         if(event.wheel.y > 0) {
-          quantum_speed += 0.1f;
+          quantum_speed += 0.1;
           std::cout << "Quantum speed: " << quantum_speed << std::endl;
         } else if(event.wheel.y < 0) {
-          quantum_speed -= 0.1f;
+          quantum_speed -= 0.1;
           std::cout << "Quantum speed: " << quantum_speed << std::endl;
         }
         if(event.wheel.x > 0) {
-          quantum_mass += 1.0f;
+          quantum_mass += 1.0;
           std::cout << "Quantum mass: " << quantum_mass << std::endl;
         } else if(event.wheel.x < 0) {
-          quantum_mass -= 1.0f;
+          quantum_mass -= 1.0;
           std::cout << "Quantum mass: " << quantum_mass << std::endl;
         }
         break;
@@ -2776,29 +2874,29 @@ int main(int argc, char *argv[])
           }
           break;
         case XPad::AXIS_RIGHT_Y:
-          if(fabs(event.jaxis.value) > XPad::AXIS_RIGHT_DEAD_ZONE) {
-            joy_pitch = event.jaxis.value * 2.0f * M_PI / (float)XPad::AXIS_MAX * joy_sensitivity.x();
+          if(rabs(event.jaxis.value) > XPad::AXIS_RIGHT_DEAD_ZONE) {
+            joy_pitch = event.jaxis.value * 2.0 * M_PI / (Real)XPad::AXIS_MAX * joy_sensitivity.x();
           } else {
             joy_pitch = NAN;
           }
           break;
         case XPad::AXIS_RIGHT_X:
-          if(fabs(event.jaxis.value) > XPad::AXIS_RIGHT_DEAD_ZONE) {
-            joy_yaw = event.jaxis.value * 2.0f * M_PI / (float)XPad::AXIS_MAX * joy_sensitivity.y();
+          if(rabs(event.jaxis.value) > XPad::AXIS_RIGHT_DEAD_ZONE) {
+            joy_yaw = event.jaxis.value * 2.0 * M_PI / (Real)XPad::AXIS_MAX * joy_sensitivity.y();
           } else {
             joy_yaw = NAN;
           }
           break;
         case XPad::AXIS_LEFT_TRIGGER:
           if(event.jaxis.value > XPad::AXIS_MIN) {
-            joy_roll = -((event.jaxis.value - XPad::AXIS_MIN) * 2.0f * M_PI / (float)XPad::AXIS_MAX * joy_sensitivity.z());
+            joy_roll = -((event.jaxis.value - XPad::AXIS_MIN) * 2.0 * M_PI / (Real)XPad::AXIS_MAX * joy_sensitivity.z());
           } else {
             joy_roll = NAN;
           }
           break;
         case XPad::AXIS_RIGHT_TRIGGER:
           if(event.jaxis.value > XPad::AXIS_MIN) {
-            joy_roll = (event.jaxis.value - XPad::AXIS_MIN) * 2.0f * M_PI / (float)XPad::AXIS_MAX * joy_sensitivity.z();
+            joy_roll = (event.jaxis.value - XPad::AXIS_MIN) * 2.0 * M_PI / (Real)XPad::AXIS_MAX * joy_sensitivity.z();
           } else {
             joy_roll = NAN;
           }
@@ -2816,7 +2914,7 @@ int main(int argc, char *argv[])
           break;
         case XPad::BUTTON_B:
           if(event.jbutton.state == SDL_PRESSED) {
-            speed *= 2.0f;
+            speed *= 2.0;
             std::cout << "Speed: " << speed << std::endl;
           }
           break;
@@ -2854,7 +2952,7 @@ int main(int argc, char *argv[])
       }
     }
 
-    float sec_per_frame = ms_per_frame / 1000.0f;
+    Real sec_per_frame = ms_per_frame / 1000.0;
 
     if(!isnan(joy_roll)) {
       droll -= joy_roll * sec_per_frame;
@@ -2872,21 +2970,21 @@ int main(int argc, char *argv[])
     }
     camera->rotateBy(Vec3(dpitch, dyaw, droll));
 
-    quanta.update(1.0f);
+    quanta.update(1.0);
 
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(80.0f, (float)window_width / (float)window_height, near_plane, far_plane);
+    gluPerspective(80.0, (Real)window_width / (Real)window_height, near_plane, far_plane);
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    glLoadMatrixf(camera->matrix().invert());
+    glLoadMatrixr(camera->matrix().invert());
     //glMultMatrixf(camera->rotationMatrix().invert());
 
-    glLightfv(GL_LIGHT0, GL_POSITION, Vec3(0,  far_plane * 2, 0, 1));
+    glLightrv(GL_LIGHT0, GL_POSITION, Vec3(0,  far_plane * 2, 0, 1));
 
     Camera c(*view_camera);
     c.setPosition(Vec3());
