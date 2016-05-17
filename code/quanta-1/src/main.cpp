@@ -148,6 +148,7 @@ Vec3 operator* (Real a, const Vec3 &v);
 
 class Vec3
 {
+public:
 #ifdef SLOW_VECTOR
   typedef Real RealArray[4];
 #else
@@ -155,6 +156,7 @@ class Vec3
   typedef Integer BoolArray __attribute__((vector_size(sizeof(Integer) * 4)));
 #endif
 
+private:
   RealArray _v;
   
 public:
@@ -458,6 +460,7 @@ class Matrix
   typedef Real RealArray[16];
 #else
   typedef Real RealArray __attribute__((vector_size(sizeof(Real) * 16)));
+  typedef Real RowArray __attribute__((vector_size(sizeof(Real) * 4)));
 #endif
   RealArray _values;
 
@@ -562,6 +565,7 @@ public:
   {
     Matrix ret;
 
+#ifdef SLOW_VECTOR
     for(int i = 0; i < 4; i++) {
       for(int j = 0; j < 4; j++) {
         for(int k = 0; k < 4; k++) {
@@ -569,16 +573,37 @@ public:
         }
       }
     }
+#else
+    for(int i = 0; i < 4; i++) {
+      RowArray row = { get(i, 0), get(i, 1), get(i, 2), get(i, 3) };
+
+      for(int j = 0; j < 4; j++) {
+        RowArray col = { m.get(0, j), m.get(1, j), m.get(2, j), m.get(3, j) };
+        RowArray cell = row * col;
+        ret.set(i, j, cell[0] + cell[1] + cell[2] + cell[3]);
+      }
+    }
+#endif
 
     return ret;
   }
 
   Vec3 operator*(const Vec3 &v) const
   {
+#ifdef SLOW_VECTOR
     return Vec3(get(0, 0) * v.x() + get(1, 0) * v.y() + get(2, 0) * v.z() + get(3, 0) * v.w(),
                 get(0, 1) * v.x() + get(1, 1) * v.y() + get(2, 1) * v.z() + get(3, 1) * v.w(),
                 get(0, 2) * v.x() + get(1, 2) * v.y() + get(2, 2) * v.z() + get(3, 2) * v.w(),
                 get(0, 3) * v.x() + get(1, 3) * v.y() + get(2, 3) * v.z() + get(3, 3) * v.w());
+#else
+     Vec3::RealArray c1 = { get(0, 0), get(0, 1), get(0, 2), get(0, 3) };
+     Vec3::RealArray c2 = { get(1, 0), get(1, 1), get(1, 2), get(1, 3) };
+     Vec3::RealArray c3 = { get(2, 0), get(2, 1), get(2, 2), get(2, 3) };
+     Vec3::RealArray c4 = { get(3, 0), get(3, 1), get(3, 2), get(3, 3) };
+
+     Vec3::RealArray ret = c1 * v.x() + c2 * v.y() + c3 * v.z() + c4 * v.w();
+     return Vec3(ret);
+#endif
   }
 
   Matrix operator*(Real n) const
