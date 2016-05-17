@@ -10,7 +10,6 @@ FRAMEWORKS=-framework SDL2 -framework opengl
 LDFLAGS+=$(FRAMEWORKS) -L/opt/local/lib
 CFLAGS+=--std=c++0x $(FRAMEWORKS) -DMAC -g -Ivendor/sha1 -Ivendor/gl
 #OBJS+=src/osx.o
-
 else # MAC
 LDFLAGS+=-Lvendor/root/lib -lSDL2 -lGL -lGLU
 CFLAGS+=-std=c++0x
@@ -22,7 +21,11 @@ CFLAGS+=-pg -fprofile-arcs -ftest-coverage
 endif
 
 ifdef RELEASE
+ifdef RASPBERRY
+CFLAGS+=-O3 -fomit-frame-pointer -mfpu=neon-vfpv4
+else
 CFLAGS+=-O3 -mtune=nocona -msse -msse2 -msse3 -mfpmath=sse
+endif
 endif
 
 ifdef WRAPAROUND
