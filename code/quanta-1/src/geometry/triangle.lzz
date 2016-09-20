@@ -1,0 +1,116 @@
+#hdr
+#include "real.h"
+#include "vec3.h"
+#include "index_out_of_bounds_error.h"
+#end
+
+class Triangle
+{
+  Vec3 _verts[3], _normal;
+
+public:
+  Triangle(const Vec3 &a, const Vec3 &b, const Vec3 &c)
+  {
+    _verts[0] = a;
+    _verts[1] = b;
+    _verts[2] = c;
+    updateNormal();
+  }
+
+  Vec3 project(const Vec3 &point) const
+  {
+    return point.projectOnto(normal());
+  }
+
+  Vec3 baryCoordinate(const Vec3 &point) const
+  {
+    Vec3 d = project(point - _verts[0]);
+    Vec3 v = point - d;
+    Real d_dot = d.dot(normal());
+    Real d_sign = d_dot < 0.0f ? -1.0f : 1.0f;
+    Vec3 v0 = _verts[1] - _verts[0], v1 = _verts[2] - _verts[0], v2 = v - _verts[0];
+
+    Real d00 = v0.dot(v0),
+      d01 = v0.dot(v1),
+      d11 = v1.dot(v1),
+      d20 = v2.dot(v0),
+      d21 = v2.dot(v1);
+
+    Real invDenom = 1.0f / (d00 * d11 - d01 * d01);
+    Real s = (d11 * d20 - d01 * d21) * invDenom;
+    Real t = (d00 * d21 - d01 * d20) * invDenom;
+
+    return Vec3(s, d_sign * d.magnitude(), t);
+  }
+
+  const Vec3 &vertex(int n) const
+  {
+    if(n < 0 || n >= 3) throw IndexOutOfBoundsError(this, n, 3);
+    return _verts[n];
+  }
+
+  void setVertex(int n, const Vec3 &v)
+  {
+    _verts[n] = v;
+  }
+
+  void updateNormal()
+  {
+    _normal = (_verts[1] - _verts[0]).cross(_verts[2] - _verts[0]).normalize();
+  }
+
+  const Vec3 &normal() const
+  {
+    return _normal;
+  }
+
+  Vec3 cartCoordinate(const Vec3 &bary) const
+  {
+    Real t = 1.0f - bary.x() - bary.z();
+
+    return Vec3(t * _verts[0].x() + bary.x() * _verts[1].x() + bary.z()*_verts[2].x(),
+                t * _verts[0].y() + bary.x() * _verts[1].y() + bary.z()*_verts[2].y(),
+                t * _verts[0].z() + bary.x() * _verts[1].z() + bary.z()*_verts[2].z()) +
+      Vec3(normal() * bary.y());
+  }
+
+  static bool sameSideAs(const Vec3 &p1, const Vec3 &p2, const Vec3 &a, const Vec3 &b)
+  {
+    Vec3 cp1 = (b - a).cross(p1 - a);
+    Vec3 cp2 = (b - a).cross(p2 - a);
+    return cp1.dot(cp2) >= 0.0f;
+  }
+
+  bool contains(const Vec3 &v) const
+  {
+    //    0
+    //    /\
+    //   / v\
+    // 2+----+1
+    Vec3 b = baryCoordinate(v);
+    return
+      (b.x() >= (Real)0.0 && b.x() <= (Real)1.0) &&
+      (b.z() >= (Real)0.0 && b.z() <= (Real)1.0) &&
+      b.x() + b.z() <= (Real)1.01;
+  }
+
+  Vec3 closestPoint(const Vec3 &v) const
+  {
+    Vec3 bary = baryCoordinate(v);
+    Real u = clamp(1.0 - bary.x() - bary.z(), 1.0);
+    bary.setX(clamp(bary.x(), (Real)1.0));
+    bary.setY(clamp(bary.y(), (Real)0.0));
+    bary.setZ(clamp(bary.z(), (Real)(1.0 - bary.x() - u)));
+    return cartCoordinate(bary);
+  }
+
+  Real distanceTo(const Vec3 &v) const
+  {
+    return (v - closestPoint(v)).magnitude();
+  }
+
+  Real distanceToSquared(const Vec3 &v) const
+  {
+    return (v - closestPoint(v)).magnitude_squared();
+  }
+};

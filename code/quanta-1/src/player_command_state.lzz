@@ -1,0 +1,52 @@
+#hdr
+#include "vec3.h"
+#end
+
+class PlayerCommandState
+{
+  bool _forward, _backward, _left, _right, _up, _down;
+
+public:
+  PlayerCommandState()
+    : _forward(false), _backward(false), _left(false), _right(false), _up(false), _down(false)
+  {
+  }
+
+  void movingForward(bool yes) { _forward = yes; }
+  bool isMovingForward() const { return _forward; }
+
+  void movingBackward(bool yes) { _backward = yes; }
+  bool isMovingBackward() const { return _backward; }
+
+  void movingLeft(bool yes) { _left = yes; }
+  bool isMovingLeft() const { return _left; }
+
+  void movingRight(bool yes) { _right = yes; }
+  bool isMovingRight() const { return _right; }
+
+  void movingUp(bool yes) { _up = yes; }
+  bool isMovingUp() const { return _up; }
+
+  void movingDown(bool yes) { _down = yes; }
+  bool isMovingDown() const { return _down; }
+
+  Vec3 motionVector()
+  {
+    Vec3 dir(0, 0, 0, 0);
+
+    if(isMovingForward())
+      dir += Vec3(0.0, 0.0, -1.0);
+    if(isMovingBackward())
+      dir += Vec3(0.0, 0.0, 1.0);
+    if(isMovingLeft())
+      dir += Vec3(-1.0, 0.0, 0.0);
+    if(isMovingRight())
+      dir += Vec3(1.0, 0.0, 0.0);
+    if(isMovingUp())
+      dir += Vec3(0.0, 1.0, 0.0);
+    if(isMovingDown())
+      dir += Vec3(0.0, -1.0, 0.0);
+
+    return dir.normalize();
+  }
+};

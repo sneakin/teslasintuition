@@ -1,0 +1,28 @@
+#hdr
+#include <string>
+#include "colors.h"
+#include "renderer/material.h"
+#include "renderer/texture.h"
+#end
+
+#include "delegate.h"
+
+class TexturedMaterial
+{
+  Material _material;
+  Texture _texture;
+
+public:
+  TexturedMaterial(const std::string &path, const Vec3 &diffuse = Colors::White, const Vec3 &specular = Colors::Clear, int shininess = 0, const Vec3 &ambient = Colors::Black)
+    : _material(diffuse, specular, shininess, ambient), _texture(path, true, true)
+  {
+  }
+
+  const Material &material() const { return _material; }
+  Material &material() { return _material; }
+
+  const Texture &texture() const { return _texture; }
+  Texture &texture() { return _texture; }
+
+  DELEGATE(const Vec3 &, diffuse, _material);
+};

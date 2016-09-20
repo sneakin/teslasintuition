@@ -1,0 +1,224 @@
+#hdr
+#include <map>
+#include "renderer/material.h"
+#include "renderer/texture.h"
+#include "renderer/camera.h"
+#end
+
+#src
+#include <SDL2/SDL.h>
+#include "gl.h"
+#end
+
+class Renderer
+{
+public:
+  typedef std::map<const Texture *, GLuint> TextureIdMap;
+private:
+  TextureIdMap _texture_handles;
+public:
+  Renderer() { }
+
+  Renderer(const Renderer &r)
+  {
+    throw "fuck";
+  }
+
+  virtual ~Renderer()
+  {
+    for(TextureIdMap::iterator it = _texture_handles.begin(); it != _texture_handles.end(); it++) {
+      glDeleteTextures(1, &it->second);
+    }
+  }
+
+  void bindMaterial(GLenum face, const Material &m)
+  {
+    glMateriali(face, GL_SHININESS, m.shininess());
+    glMaterialrv(face, GL_SPECULAR, m.specular());
+    glMaterialrv(face, GL_EMISSION, m.emission());
+    glMaterialrv(face, GL_AMBIENT, m.ambient());
+    glMaterialrv(face, GL_DIFFUSE, m.diffuse());
+  }
+
+  void unbindMaterial(GLenum face)
+  {
+    glMateriali(face, GL_SHININESS, 127);
+    glMaterialrv(face, GL_SPECULAR, Colors::White);
+    glMaterialrv(face, GL_EMISSION, Colors::Black);
+    glMaterialrv(face, GL_AMBIENT, Colors::Black);
+    glMaterialrv(face, GL_DIFFUSE, Colors::White);
+  }
+
+  unsigned int findTextureHandle(const Texture &tex)
+  {
+    return _texture_handles[&tex];
+  }
+
+  void bindTexture(const Texture &tex)
+  {
+    glBindTexture(GL_TEXTURE_2D, findTextureHandle(tex));
+  }
+
+  void unbindTexture()
+  {
+    glBindTexture(GL_TEXTURE_2D, 0);
+  }
+
+  bool loadTexture(Texture &tex)
+  {
+    GLuint tex_id;
+    GLenum mode = GL_RGBA;
+
+    if(!tex.loaded()) {
+      if(!tex.load()) {
+        return false;
+      }
+    }
+
+    int bpp;
+    Uint32 rmask, gmask, bmask, amask;
+    SDL_PixelFormatEnumToMasks(SDL_PIXELFORMAT_ABGR8888, &bpp, &rmask, &gmask, &bmask, &amask);
+    SDL_Surface *surf = SDL_CreateRGBSurface(0, tex.width(), tex.height(), bpp, rmask, gmask, bmask, amask);
+    if(surf == NULL) {
+      return false;
+    }
+
+    SDL_SetSurfaceAlphaMod(surf, 0xFF);
+    SDL_SetSurfaceBlendMode(surf, SDL_BLENDMODE_NONE);
+    SDL_BlitSurface(tex.surface(), NULL, surf, NULL);
+
+    switch(surf->format->BytesPerPixel) {
+      case 3:
+        mode = GL_RGB;
+        break;
+      case 4:
+        mode = GL_RGBA;
+        break;
+      default:
+        std::cerr << "Unknown mode in " << tex.path() << "\t" << (int)surf->format->BytesPerPixel << std::endl;
+        return false;
+    }
+
+    //glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, surf->w);
+    ASSERT_GL_ERROR;
+    glGenTextures(1, &tex_id);
+    ASSERT_GL_ERROR;
+    glBindTexture(GL_TEXTURE_2D, tex_id);
+    ASSERT_GL_ERROR;
+    //glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+    //ASSERT_GL_ERROR;
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+    ASSERT_GL_ERROR;
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
+    ASSERT_GL_ERROR;
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, tex.repeatsX() ? GL_REPEAT : GL_CLAMP_TO_EDGE);
+    ASSERT_GL_ERROR;
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, tex.repeatsY() ? GL_REPEAT : GL_CLAMP_TO_EDGE);
+    ASSERT_GL_ERROR;
+    glTexImage2D(GL_TEXTURE_2D, 0, mode, surf->w, surf->h, 0, mode, GL_UNSIGNED_BYTE, surf->pixels);
+    ASSERT_GL_ERROR;
+    glGenerateMipmap(GL_TEXTURE_2D);
+    ASSERT_GL_ERROR;
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    _texture_handles[&tex] = tex_id;
+
+    SDL_FreeSurface(surf);
+
+    return true;
+  }
+
+  void renderCameraAxis(const Camera &camera)
+  {
+    glBegin(GL_LINES);
+    glColor3rv(Colors::Red);
+    glVertex3rv(camera.position() + camera.right() * 1024);
+    glVertex3rv(camera.position());
+    glColor3rv(Colors::Green);
+    glVertex3rv(camera.position() + camera.up() * 1024);
+    glVertex3rv(camera.position());
+    glColor3rv(Colors::Blue);
+    glVertex3rv(camera.position() + camera.forward() * 1024);
+    glVertex3rv(camera.position());
+
+
+    glColor3rv(Colors::Yellow);
+    glVertex3rv(camera.position() + Vec3(1, 0, 0) * 1024);
+    glVertex3rv(camera.position());
+    glColor3rv(Colors::Cyan);
+    glVertex3rv(camera.position() + Vec3(0, 1, 0) * 1024);
+    glVertex3rv(camera.position());
+    glColor3rv(Colors::Magenta);
+    glVertex3rv(camera.position() + Vec3(0, 0, 1) * 1024);
+    glVertex3rv(camera.position());
+
+    glEnd();
+  }
+
+  void renderOriginAxis()
+  {
+    glBegin(GL_LINES);
+    glColor3rv(Colors::Red);
+    glVertex3r(1024, 0, 0);
+    glVertex3r(0, 0, 0);
+    glColor3rv(Colors::Green);
+    glVertex3r(0, 1024, 0);
+    glVertex3r(0, 0, 0);
+    glColor3rv(Colors::Blue);
+    glVertex3r(0, 0, 1024);
+    glVertex3r(0, 0, 0);
+    glEnd();
+  }
+
+  void renderAxis(const Vec3 &origin, const Vec3 &right = Vec3::X, const Vec3 &up = Vec3::Y)
+  {
+    glPushMatrix(); {
+      glMultMatrixr(Matrix::translation(origin));
+      glMultMatrixr(Matrix::lookAt(up.cross(right), up));
+      // todo rotate to fit right
+
+      renderOriginAxis();
+
+    } glPopMatrix();
+  }
+
+  void renderVector(const Vec3 &origin, const Vec3 &v, const Vec3 &color = Colors::White)
+  {
+    glLineWidth(16.0);
+    glColor3rv(color);
+    glBegin(GL_LINES);
+    glVertex3rv(origin);
+    glVertex3rv(origin + v);
+    glEnd();
+  }
+
+  void renderNormal(const Vec3 &origin, const Vec3 &normal, const Vec3 &color = Colors::Green)
+  {
+    renderVector(origin, normal * 512.0, color);
+  }
+
+  void renderPole(const Camera &cam, const Vec3 &position, Real value, const Vec3 &color)
+  {
+    renderVector(position, Vec3(0, 1, 0) * value, color);
+  }
+
+  void renderPoint(const Vec3 &position, const Vec3 &color = Colors::White)
+  {
+    glBegin(GL_POINTS);
+    glColor4rv(color);
+    glVertex3rv(position);
+    glEnd();
+  }
+
+  void renderLine(const Vec3 &a, const Vec3 &b, const Vec3 &color = Colors::White)
+  {
+    glLineWidth(4);
+    glBegin(GL_LINES);
+    glColor3rv(color);
+    glVertex3rv(a);
+    glVertex3rv(b);
+    glEnd();
+  }
+};

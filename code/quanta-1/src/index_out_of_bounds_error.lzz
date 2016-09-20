@@ -1,0 +1,15 @@
+class IndexOutOfBoundsError
+{
+  const void *_array;
+  int _index, _max;
+
+public:
+  IndexOutOfBoundsError(const void *array, int index, int max)
+    : _array(array), _index(index), _max(max)
+  {
+  }
+
+  const void *array() const { return _array; }
+  int index() const {  return _index; }
+  int max() const { return _max; }
+};

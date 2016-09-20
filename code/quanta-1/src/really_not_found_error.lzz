@@ -1,0 +1,5 @@
+class ReallyNotFoundError
+{
+public:
+  ReallyNotFoundError(const void *_, const void *__) { }
+};

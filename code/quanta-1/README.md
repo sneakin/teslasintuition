@@ -13,6 +13,7 @@ Dependencies
   * SDL2 http://libsdl.org/
   * GNU Make
   * g++ post 2011
+  * Lazy C++ http://lazycplusplus.com/
 
 Linux / OS X
 ---

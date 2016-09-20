@@ -1,0 +1,54 @@
+#hdr
+#include "renderer.h"
+#include "geometry/icosahedron.h"
+#include "geometry/icosahedron_renderer.h"
+#include "quanta.h"
+#end
+
+#src
+#include "gl.h"
+#end
+
+class QuantaRenderer
+{
+public:
+  Icosahedron _icosa;
+  IcosahedronRenderer _icosa_ren;
+  Renderer &_renderer;
+
+  QuantaRenderer(Renderer &renderer)
+    : _icosa(1.0), _icosa_ren(renderer), _renderer(renderer)
+  {
+  }
+
+  void render(const Camera &camera, const Quantum &quantum, Real radius, Real alpha = 1.0)
+  {
+     glPushMatrix();
+     glTranslater(quantum.position().x(), quantum.position().y(), quantum.position().z());
+     glScaler(radius, radius, radius);
+     glColor3rv(quantum.color().abs() * Vec3(1.0, 1.0, 1.0, alpha));
+     _icosa_ren.render(camera, _icosa);
+     glPopMatrix();
+  }
+
+  void render(const Camera &camera, const Quanta &quanta)
+  {
+    for(int i = 0; i < quanta.size(); i++) {
+      Quantum q = quanta[i];
+      glPushMatrix(); {
+        glTranslater(q.position().x(), q.position().y(), q.position().z());
+        glScaler(quanta.quantum_radius(), quanta.quantum_radius(), quanta.quantum_radius());
+        glColor3rv(q.color().abs());
+        _icosa_ren.render(camera, _icosa);
+      } glPopMatrix();
+    }
+  }
+
+  void renderVelocities(const Camera &camera, const Quanta &quanta)
+  {
+    for(int i = 0; i < quanta.size(); i++) {
+      Quantum q = quanta[i];
+      _renderer.renderVector(q.position(), q.velocity() * _icosa.radius(), q.color());
+    }
+  }
+};

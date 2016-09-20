@@ -1,5 +1,6 @@
-#ifndef _MATH_FUN_HPP_
-#define _MATH_FUN_HPP_
+#src
+#include <cmath>
+#end
 
 template<typename T>
 T clamp(const T &value, const T &max, const T &min = 0)
@@ -40,5 +41,3 @@ const A &minimum(const A &a, const A &b)
     return b;
   }
 }
-
-#endif /* _MATH_FUN_HPP */

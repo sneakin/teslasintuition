@@ -1,0 +1,44 @@
+#hdr
+#include "vec3.h"
+#end
+
+class Colors
+{
+public:
+  static const Vec3 Clear = Vec3(1, 1, 1, 0);
+  static const Vec3 Opaque = Vec3(1, 1, 1, 1);
+  static const Vec3 White = Vec3(1, 1, 1);
+  static const Vec3 Black = Vec3(0, 0, 0);
+  static const Vec3 Red = Vec3(1, 0, 0);
+  static const Vec3 Green = Vec3(0, 1, 0);
+  static const Vec3 Blue = Vec3(0, 0, 1);
+  static const Vec3 Yellow = Vec3(1, 1, 0);
+  static const Vec3 Cyan = Vec3(0, 1, 1);
+  static const Vec3 Magenta = Vec3(1, 0, 1);
+
+  static const int NumColors = 6;
+
+  static const Vec3 &color(int n)
+  {
+    static const Vec3 *palette[NumColors] = { &Red, &Yellow, &Green, &Cyan, &Blue, &Magenta };
+    return *palette[abs(n) % NumColors];
+  }
+
+  static const Vec3 &color()
+  {
+    return color(rand());
+  }
+
+  static Vec3 color(Real n)
+  {
+    if(isinf(n)) {
+      return White;
+    } else if(isnan(n)) {
+      return Black;
+    } else {
+      Vec3 a = color((int)floorr(n)), b = color((int)ceilr(n));
+      Real i, t = modfr(n, &i);
+      return a * ((Real)1.0 - t) + b * t;
+    }
+  }
+}

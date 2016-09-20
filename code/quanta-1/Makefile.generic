@@ -18,6 +18,10 @@ OBJDIR=$(OUTDIR)/obj
 BINDIR=$(OUTDIR)/bin
 DEPDIR=$(OUTDIR)/depends
 
+LZZFLAGS+=-I$(OUTDIR)/cpp -I$(SRCDIR)
+CFLAGS+=-I$(OUTDIR)/cpp -I$(SRCDIR)
+CXXFLAGS+=-I$(OUTDIR)/cpp -I$(SRCDIR)
+
 $(OUTDIR):
 ifeq ($(wildcard $@),)
 	mkdir -p $@
@@ -30,7 +34,7 @@ endif
 
 SUBDIRS=$(CODEDIR) $(OBJDIR) $(BINDIR)
 
-.PRECIOUS: $(CODEDIR)/%.cpp
+.PRECIOUS: $(CODEDIR)/%.cpp $(DEPDIR)/%.depend
 
 $(CODEDIR)/%.cpp: src/%.lzz
 	mkdir -p $(@D)
@@ -40,17 +44,18 @@ $(CODEDIR)/%.h: src/%.lzz
 	mkdir -p $(@D)
 	$(LZZ) -x $(LZZFLAGS) -o $(@D) $<
 
-$(OBJDIR)/%.o: $(CODEDIR)/%.cpp
+$(OBJDIR)/%.o: $(CODEDIR)/%.cpp $(DEPDIR)/%.depend
 	mkdir -p $(@D)
 	$(CXX) $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) -c -o $@ $<
 
-$(OBJDIR)/%.o: $(SRCDIR)/%.cpp
+$(OBJDIR)/%.o: $(SRCDIR)/%.cpp $(DEPDIR)/%.depend
 	mkdir -p $(@D)
 	$(CXX) $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) -c -o $@ $<
 
 define PROGRAM_template =
  OBJECTS = $$(addprefix $(OBJDIR)/, $$(patsubst %.cpp,%.o,$$(patsubst %.lzz,%.o,$$($(1)_SRC))))
  $$(BINDIR)/$(1): $$(OBJECTS)
+	@echo $$^
 	mkdir -p $$(@D)
 	$$(CXX) $$(CFLAGS) $$(LDFLAGS) -o $$@ $$^
  ALL_OBJECTS += $$(OBJECTS)
@@ -73,6 +78,10 @@ d-programs:
 do-dirs: $(SUBDIRS)
 
 $(DEPDIR)/%.depend: $(CODEDIR)/%.cpp
+	mkdir -p $(@D)
+	$(CXX) -MM $(CPPFLAGS) $(CXXFLAGS) $^ | sed 's;\([^ ]*\)\.o:;$$(OBJDIR)/\1\.o $$(DEPDIR)/\1\.depend:;' > $@
+
+$(DEPDIR)/%.depend: $(SRCDIR)/%.cpp
 	mkdir -p $(@D)
 	$(CXX) -MM $(CPPFLAGS) $(CXXFLAGS) $^ | sed 's;\([^ ]*\)\.o:;$$(OBJDIR)/\1\.o $$(DEPDIR)/\1\.depend:;' > $@
 

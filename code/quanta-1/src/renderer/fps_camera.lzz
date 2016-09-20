@@ -1,0 +1,54 @@
+#hdr
+#include "renderer/camera.h"
+#end
+
+class FPSCamera: public Camera
+{
+  Vec3 _angles, _plane;
+  bool _flying;
+
+public:
+  FPSCamera(const Vec3 &position, const Vec3 &angles)
+    : Camera(position), _angles(angles), _plane(Vec3::Y), _flying(false)
+  {
+    updateMatrix();
+  }
+
+  virtual void moveBy(const Vec3 &delta)
+  {
+    increasePosition(Matrix::rotate(_angles.y(), _plane) * delta);
+  }
+
+  void setAngles(const Vec3 &angles)
+  {
+    _angles = angles.clamp(Vec3(-M_PI/2.0, -INFINITY, -INFINITY), Vec3(M_PI/2.0, INFINITY, INFINITY));
+    updateMatrix();
+  }
+
+  virtual void rotateBy(const Vec3 &angles)
+  {
+    setAngles(_angles + angles);
+  }
+
+  virtual void lookAt(const Vec3 &forward, const Vec3 &up)
+  {
+    Matrix m(Matrix::lookAt(forward, up));
+    _plane = up;
+    setAngles(Vec3(atan2r(m.get(2,1), m.get(2,2)),
+                   atan2r(-m.get(2,0), sqrtr(m.get(2,1)*m.get(2,1)+m.get(2,2)*m.get(2,2))),
+                   M_PI + atan2r(m.get(1,0), m.get(0, 0))));
+  }
+
+  void updateMatrix()
+  {
+    setRotationMatrix(Matrix::rotate(_angles) * Matrix::orient(_plane.cross(Vec3::Z), _plane, -Vec3::Z));
+  }
+
+  const Vec3 &plane() const { return _plane; }
+
+  void setPlane(const Vec3 &n)
+  {
+    _plane = n.normalize();
+    updateMatrix();
+  }
+};

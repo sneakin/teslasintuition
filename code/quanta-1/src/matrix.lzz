@@ -1,0 +1,447 @@
+#hdr
+#include <iostream>
+#include "real.h"
+#include "vec3.h"
+#include "index_out_of_bounds_error.h"
+
+#ifdef SLOW_VECTOR
+  typedef Real RealArray_16[16];
+#else
+  typedef Real RealArray_16 __attribute__((vector_size(sizeof(Real) * 16)));
+  typedef Real RowArray_4 __attribute__((vector_size(sizeof(Real) * 4)));
+#endif
+#end
+
+class Matrix
+{
+  RealArray_16 _values;
+
+public:
+  Matrix()
+  {
+#if 1
+    for(int i = 0; i < 4; i++) {
+      for(int j = 0; j < 4; j++) {
+        _values[i*4+j] = (Real)0.0;
+      }
+    }
+#else
+    _values = { (Real)0.0, (Real)0.0, (Real)0.0, (Real)0.0,
+                (Real)0.0, (Real)0.0, (Real)0.0, (Real)0.0,
+                (Real)0.0, (Real)0.0, (Real)0.0, (Real)0.0,
+                (Real)0.0, (Real)0.0, (Real)0.0, (Real)0.0
+    };
+#endif
+  }
+
+  Matrix(const Matrix &m)
+  {
+#ifdef SLOW_VECTOR    
+    for(int i = 0; i < 4; i++) {
+      for(int j = 0; j < 4; j++) {
+        _values[i*4+j] = m._values[i*4+j];
+      }
+    }
+#else
+    _values = m._values;
+#endif
+  }
+
+  Matrix(const RealArray_16 other)
+  {
+#ifdef SLOW_VECTOR
+    for(int i = 0; i < 4; i++) {
+      for(int j = 0; j < 4; j++) {
+        _values[i*4+j] = other[i*4+j];
+      }
+    }
+#else
+    _values = other;
+#endif
+  }
+
+  Matrix(Real a, Real b, Real c, Real d,
+         Real e, Real f, Real g, Real h,
+         Real i, Real j, Real k, Real l,
+         Real m, Real n, Real o, Real p)
+  {
+    set(0, 0, a);
+    set(1, 0, b);
+    set(2, 0, c);
+    set(3, 0, d);
+
+    set(0, 1, e);
+    set(1, 1, f);
+    set(2, 1, g);
+    set(3, 1, h);
+
+    set(0, 2, i);
+    set(1, 2, j);
+    set(2, 2, k);
+    set(3, 2, l);
+
+    set(0, 3, m);
+    set(1, 3, n);
+    set(2, 3, o);
+    set(3, 3, p);
+  }
+
+#ifdef SLOW_VECTOR
+#define BINARY_OP(OP) \
+  Matrix operator OP (const Matrix &m) const \
+  { \
+    Matrix ret; \
+    \
+    for(int i = 0; i < 4; i++) { \
+      for(int j = 0; j < 4; j++) { \
+        ret.set(i, j, get(i, j) OP m.get(i, j)); \
+      } \
+    } \
+    \
+    return ret;\
+  }
+#else
+#define BINARY_OP(OP) \
+  Matrix operator OP (const Matrix &m) const \
+  { \
+    return Matrix(_values OP m._values); \
+  }
+
+#endif
+  BINARY_OP(+)
+  BINARY_OP(-)
+
+#undef BINARY_OP
+
+  Matrix operator*(const Matrix &m) const
+  {
+    Matrix ret;
+
+#ifdef SLOW_VECTOR
+    for(int i = 0; i < 4; i++) {
+      for(int j = 0; j < 4; j++) {
+        for(int k = 0; k < 4; k++) {
+          ret.set(i, j, ret.get(i, j) + get(i, k) * m.get(k, j));
+        }
+      }
+    }
+#else
+    for(int i = 0; i < 4; i++) {
+      RowArray_4 row = { get(i, 0), get(i, 1), get(i, 2), get(i, 3) };
+
+      for(int j = 0; j < 4; j++) {
+        RowArray_4 col = { m.get(0, j), m.get(1, j), m.get(2, j), m.get(3, j) };
+        RowArray_4 cell = row * col;
+        ret.set(i, j, cell[0] + cell[1] + cell[2] + cell[3]);
+      }
+    }
+#endif
+
+    return ret;
+  }
+
+  Vec3 operator*(const Vec3 &v) const
+  {
+#ifdef SLOW_VECTOR
+    return Vec3(get(0, 0) * v.x() + get(1, 0) * v.y() + get(2, 0) * v.z() + get(3, 0) * v.w(),
+                get(0, 1) * v.x() + get(1, 1) * v.y() + get(2, 1) * v.z() + get(3, 1) * v.w(),
+                get(0, 2) * v.x() + get(1, 2) * v.y() + get(2, 2) * v.z() + get(3, 2) * v.w(),
+                get(0, 3) * v.x() + get(1, 3) * v.y() + get(2, 3) * v.z() + get(3, 3) * v.w());
+#else
+     RealArray_4 c1 = { get(0, 0), get(0, 1), get(0, 2), get(0, 3) };
+     RealArray_4 c2 = { get(1, 0), get(1, 1), get(1, 2), get(1, 3) };
+     RealArray_4 c3 = { get(2, 0), get(2, 1), get(2, 2), get(2, 3) };
+     RealArray_4 c4 = { get(3, 0), get(3, 1), get(3, 2), get(3, 3) };
+
+     RealArray_4 ret = c1 * v.x() + c2 * v.y() + c3 * v.z() + c4 * v.w();
+     return Vec3(ret);
+#endif
+  }
+
+  Matrix operator*(Real n) const
+  {
+#ifdef SLOW_VECTOR
+    Matrix ret;
+    for(int i = 0; i < 4; i++) {
+      for(int j = 0; j < 4; j++) {
+        ret.set(i, j, get(i, j) * n);
+      }
+    }
+    return ret;
+#else
+    return Matrix(_values * n);
+#endif
+  }
+
+  Matrix operator/(Real n) const
+  {
+#ifdef SLOW_VECTOR
+    Matrix ret;
+    for(int i = 0; i < 4; i++) {
+      for(int j = 0; j < 4; j++) {
+        ret.set(i, j, get(i, j) / n);
+      }
+    }
+    return ret;
+#else
+    return Matrix(_values / n);
+#endif
+  }
+
+  Matrix transpose() const
+  {
+    Matrix ret;
+    for(int i = 0; i < 4; i++) {
+      for(int j = 0; j < 4; j++) {
+        ret.set(i, j, get(j, i));
+      } 
+    }
+    return ret;
+  }
+
+  Real sign(int x, int y) const
+  {
+    return (x*4+(y+x%2)) % 2 ? (Real)-1.0 : (Real)1.0;
+  }
+
+  Real sign3x3(int x, int y) const
+  {
+    return (x*3+y) % 2 ? (Real)-1.0 : (Real)1.0;
+  }
+
+  Real cofactor(int x, int y) const
+  {
+    return sign(x, y) * minorM(x, y).determinant3x3();
+  }
+
+  Real cofactor2x2(int x, int y) const
+  {
+    return sign3x3(x, y) * minorM(x, y).determinant2x2();
+  }
+
+  Matrix cofactorMatrix() const
+  {
+    Matrix m;
+    for(int i = 0; i < 4; i++) {
+      for(int j = 0; j < 4; j++) {
+        m.set(i, j, cofactor(i, j));
+      }
+    }
+    return m;
+  }
+
+  Real determinant() const
+  {
+    Real d = (Real)0.0;
+
+    for(int i = 0; i < 4; i++) {
+      d += get(i, 0) * cofactor(i, 0);
+    }
+
+    return d;
+  }
+
+  Real determinant3x3() const
+  {
+    Real d = (Real)0.0;
+    for(int i = 0; i < 3; i++) {
+      d += get(i, 0) * cofactor2x2(i, 0);
+    }
+    return d;
+  }
+
+  Real determinant2x2() const
+  {
+    return get(0,0) * get(1,1) - get(1,0) * get(0,1);
+  }
+
+  Matrix minorM(int col, int row) const 
+  {
+    Matrix r;
+
+    for(int i = 0, x = 0; i < 3; i++, x++) {
+      if(x == col) x++;
+      for(int j = 0, y = 0; j < 3; j++, y++) {
+        if(y == row) y++;
+        r.set(i, j, get(x, y));
+      }
+    }
+    return r;
+  }
+
+  Matrix adjoint() const
+  {
+    return cofactorMatrix().transpose();
+  }
+
+  Matrix invert() const
+  {
+    return adjoint() * ((Real)1.0 / determinant());
+  }
+
+  bool hasNaN() const
+  {
+    for(int i = 0; i < 4; i++) {
+      for(int j = 0; j < 4; j++) {
+        if(isnan(get(i, j))) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  static Matrix rotateOnto(const Vec3 &a, const Vec3 &b)
+  {
+    return rotate(acosr(a.dot(b)), a.cross(b));
+  }
+
+  // https://en.wikipedia.org/wiki/Cross_product#Conversion_to_matrix_multiplication
+  static Matrix cross(const Vec3 &v)
+  {
+    return Matrix(0, -v.z(), v.y(), 0,
+                  v.z(), 0, -v.x(), 0,
+                  -v.y(), v.x(), 0, 0,
+                  0, 0, 0, 0);
+  }
+
+  static Matrix rotate(Real angle, const Vec3 &axis)
+  {
+    Real c = cos(angle), s = sin(angle), t = (Real)1.0 - c;
+    Real x = axis.x(), y = axis.y(), z = axis.z();
+
+    return Matrix(t*x*x + c,   t*y*x - s*z, t*z*x + s*y, 0,
+                  t*x*y + s*z, t*y*y + c  , t*z*y - s*x, 0,
+                  t*x*z - s*y, t*y*z + s*x, t*z*z + c,   0,
+                  0, 0, 0, 1);
+  }
+
+  static Matrix rotateX(Real angle)
+  {
+    Real s = sin(angle), c = cos(angle);
+
+    return Matrix(1, 0, 0, 0,
+                  0, c, -s, 0,
+                  0, s, c, 0,
+                  0, 0, 0, 1);
+  }
+
+  static Matrix rotateY(Real angle)
+  {
+    Real s = sin(angle), c = cos(angle);
+
+    return Matrix(c, 0, s, 0,
+                  0, 1, 0, 0,
+                  -s, 0, c, 0,
+                  0, 0, 0, 1);
+  }
+
+  static Matrix rotateZ(Real angle)
+  {
+    Real s = sin(angle), c = cos(angle);
+
+    return Matrix(c, -s, 0, 0,
+                  s, c, 0, 0,
+                  0, 0, 1, 0,
+                  0, 0, 0, 1);
+  }
+
+  static Matrix rotate(const Vec3 &angles)
+  {
+    //return rotateX(angles.x()) * rotateY(angles.y()) * rotateZ(angles.z());
+    return rotateZ(angles.z()) * rotateX(angles.x()) * rotateY(angles.y());
+  }
+
+  static Matrix translation(const Vec3 &v)
+  {
+    return Matrix(1, 0, 0, v.x(),
+                  0, 1, 0, v.y(),
+                  0, 0, 1, v.z(),
+                  0, 0, 0, 1); 
+  }
+
+  static Matrix translation(Real x, Real y, Real z)
+  {
+    return translation(Vec3(x, y, z));
+  }
+
+  static Matrix orient(const Vec3 &r, const Vec3 &u, const Vec3 &f, const Vec3 &o = Vec3::Origin)
+  {
+    return Matrix(r.x(), u.x(), -f.x(), o.x(),
+                  r.y(), u.y(), -f.y(), o.y(),
+                  r.z(), u.z(), -f.z(), o.z(),
+                  0, 0, 0, 1);
+  }
+
+  static Matrix lookAt(const Vec3 &forward, const Vec3 &up)
+  {
+      Vec3 axis = forward.normalize();
+      Vec3 right = up.cross(axis).normalize();
+      Vec3 real_up = axis.cross(right).normalize();
+      return orient(right, real_up, axis);
+  }
+
+  static Matrix lookAt(const Vec3 &target, const Vec3 &from, const Vec3 &up)
+  {
+      return lookAt(target - from, up) * translation(from);
+  }
+
+  static Matrix scale(const Vec3 &v)
+  {
+    return Matrix(v.x(), 0, 0, 0,
+                  0, v.y(), 0, 0,
+                  0, 0, v.z(), 0,
+                  0, 0, 0, v.w());
+  }
+
+  static Matrix identity()
+  {
+    return Matrix(1, 0, 0, 0,
+                  0, 1, 0, 0,
+                  0, 0, 1, 0,
+                  0, 0, 0, 1);
+  }
+
+  Real get(int x, int y) const
+  {
+    if(x < 0 || x >= 4)
+      throw IndexOutOfBoundsError(this, x, 4);
+    if(y < 0 || y >= 4)
+      throw IndexOutOfBoundsError(this, y, 4);
+
+    return _values[x*4+y];
+  }
+
+  void set(int x, int y, Real v)
+  {
+    if(x < 0 || x >= 4)
+      throw IndexOutOfBoundsError(this, x, 4);
+    if(y < 0 || y >= 4)
+      throw IndexOutOfBoundsError(this, y, 4);
+
+    _values[x*4+y] = v;
+  }
+
+  const Real *get() const {
+    return (Real *)&_values;
+  }
+
+  operator const Real * () const
+  {
+    return get();
+  }
+};
+
+std::ostream &operator<<(std::ostream &s, const Matrix &m)
+{
+  s << "<Matrix: ";
+
+  for(int i = 0; i < 4; i++) {
+    s << "[ " << m.get(0, i) << ", " << m.get(1, i) << ", " << m.get(2, i) << ", " << m.get(3, i) << " ], ";
+  }
+
+  s << ">";
+
+  return s;
+}

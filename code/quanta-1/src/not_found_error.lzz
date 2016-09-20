@@ -1,0 +1,9 @@
+class NotFoundError
+{
+public:
+  const void *root;
+
+  NotFoundError(const void *r, const void *_) : root(r)
+  {
+  }
+};

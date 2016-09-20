@@ -1,0 +1,283 @@
+#hdr
+#include "vec3.h"
+#include "index_out_of_bounds_error.h"
+#end
+
+class Icosahedron
+{
+public:
+  class Face
+  {
+    Vec3 *_verts[3];
+
+  public:
+    Face()
+    {
+      for(int i = 0; i < 3; i++) {
+        _verts[i] = NULL;
+      }
+    }
+
+    Face(Vec3 *a, Vec3 *b, Vec3 *c)
+    {
+      _verts[0] = a;
+      _verts[1] = b;
+      _verts[2] = c;
+    }
+
+    const Vec3 &vertex(int i) const
+    {
+      if(i < 0 || i >= 3) throw IndexOutOfBoundsError(this, i, 3);
+      return *_verts[i];
+    }
+
+    Vec3 center() const
+    {
+      return (vertex(0) + vertex(1) + vertex(2)) / 3.0;
+    }
+  };
+
+  static const int NumPoints = 12;
+  static const int NumFaces = 20;
+
+private:
+
+  Vec3 _points[NumPoints];
+  Face _faces[NumFaces];
+  Real _radius;
+
+public:
+  Icosahedron(Real radius = 1.0)
+    : _radius(radius)
+  {
+    generate();
+  }
+
+  void generate()
+  {
+    generatePoints();
+    generateFaces();
+  }
+
+  void generatePoints()
+  {
+    Real one = 1.0, psi = (1.0 + sqrt(5.0)) / 2.0;
+
+    _points[0] = Vec3(0, one, psi);
+    _points[1] = Vec3(0, -one, psi);
+    _points[2] = Vec3(0, one, -psi);
+    _points[3] = Vec3(0, -one, -psi);
+
+    _points[4] = Vec3(psi, 0, one);
+    _points[5] = Vec3(psi, 0, -one);
+    _points[6] = Vec3(-psi, 0, one);
+    _points[7] = Vec3(-psi, 0, -one);
+
+    _points[8] = Vec3(one, psi, 0);
+    _points[9] = Vec3(-one, psi, 0);
+    _points[10] = Vec3(one, -psi, 0);
+    _points[11] = Vec3(-one, -psi, 0);
+
+    for(int i = 0; i < NumPoints; i++) {
+      _points[i] = _points[i].normalize() * _radius;
+    }
+  }
+
+  static const int NeighborIndex[NumFaces][3] = {
+  { 12, 1, 13 },
+  { 15, 0, 14 },
+  { 17, 3, 16 },
+  { 18, 2, 19 },
+  { 12, 5, 16 },
+  { 17, 4, 13 },
+  { 18, 7, 14 },
+  { 15, 6, 19 },
+  { 12, 9, 14 },
+  { 18, 8, 16 },
+  { 15, 11, 13 },
+  { 17, 10, 19 },
+  { 4, 8, 0 },
+  { 0, 10, 5 },
+  { 1, 8, 6 },
+  { 7, 10, 1 },
+  { 2, 9, 4 },
+  { 5, 11, 2 },
+  { 6, 9, 3 },
+  { 3, 11, 7 },
+};
+
+// todo
+static const int PointNeighborIndex[NumFaces][3][3] = {
+  { // face 0
+    { 0, 4, 5 }, // point 0
+    { 0, 8, 14 }, // point 8
+    { 0, 10, 15 } // point 9
+  },
+  { // face 1
+    { 1, 6, 7 }, // point 2
+    { 1, 10, 13 }, // point 9
+    { 1, 8, 12 } // point 8
+  },
+  { // face 2
+    { 2, 4, 5 }, // point 1
+    { 2, 11, 19 }, // point 11
+    { 2, 9, 18 }, // point 10
+  },
+  { // face 3
+    { 3, 6, 7 }, // point 3
+    { 3, 9, 16 }, // point 10
+    { 3, 11, 17 }, // point 11
+  },
+  { // face 4
+    { 4, 8, 9 }, // point 4
+    { 0, 4, 13 }, // point 0
+    { 2, 4, 17 }, // point 1
+  },
+  { // face 5
+    { 5, 10, 11 }, // point 6
+    { 2, 5, 16 }, // point 1
+    { 0, 5, 12 }, // point 0
+  },
+  { // face 6
+    { 6, 8, 9 }, // point 5
+    { 3, 6, 19 }, // point 3
+    { 1, 6, 15 }, // point 2
+  },
+  { // face 7
+    { 7, 10, 11 }, // point 7
+    { 1, 7, 14 }, // point 2
+    { 3, 7, 18 }, // point 3
+  },
+  { // face 8
+    { 0, 1, 8 }, // point 8
+    { 4, 8, 16 }, // point 4
+    { 6, 8, 18 }, // point 5
+  },
+  { // face 9
+    { 2, 3, 9 }, // point 10
+    { 6, 9, 14 }, // point 5
+    { 4, 9, 12 }, // point 4
+  },
+  { // face 10
+    { 0, 1, 10 }, // point 9
+    { 7, 10, 19 }, // point 7
+    { 5, 10, 17 }, // point 6
+  },
+  { // face 11
+    { 2, 3, 11 }, // point 11
+    { 5, 11, 13 }, // point 6
+    { 7, 11, 15 }, // point 7
+  },
+  { // face 12
+    { 5, 12, 13 }, // point 0
+    { 9, 12, 16 }, // point 4
+    { 1, 12, 14 }, // point 8
+  },
+  { // face 13
+    { 4, 12, 13 }, // point 0
+    { 1, 13, 15 }, // point 9
+    { 11, 13, 17 }, // point 6
+  },
+  { // face 14
+    { 7, 14, 15 }, // point 2
+    { 0, 12, 14 }, // point 8
+    { 9, 14, 18 }, // point 5
+  },
+  { // face 15
+    { 6, 14, 15 }, // point 2
+    { 11, 15, 19 }, // point 7
+    { 0, 13, 15 }, // point 9
+  },
+  { // face 16
+    { 5, 16, 17 }, // point 1
+    { 3, 16, 18 }, // point 10
+    { 8, 12, 16 }, // point 4
+  },
+  { // face 17
+    { 4, 16, 17 }, // point 1
+    { 10, 13, 17 }, // point 6
+    { 3, 17, 19 }, // point 11
+  },
+  { // face 18
+    { 7, 18, 19 }, // point 3
+    { 8, 14, 18 }, // point 5
+    { 2, 16, 18 }, // point 10
+  },
+  { // face 19
+    { 6, 18, 19 }, // point 3
+    { 2, 17, 19 }, // point 11
+    { 10, 15, 19 }, // point 7
+  }
+};
+
+static const int VertexIndex[NumFaces][3] = {
+  { 0, 8, 9 },
+  { 2, 9, 8 },
+  { 1, 11, 10 },
+  { 3, 10, 11 },
+
+  { 4, 0, 1 },
+  { 6, 1, 0 },
+  { 5, 3, 2 },
+  { 7, 2, 3 },
+
+  { 8, 4, 5 },
+  { 10, 5, 4 },
+  { 9, 7, 6 },
+  { 11, 6, 7 },
+
+  { 0, 4, 8 },
+  { 0, 9, 6 },
+  { 2, 8, 5 },
+  { 2, 7, 9 },
+
+  { 1, 10, 4 },
+  { 1, 6, 11 },
+  { 3, 5, 10 },
+  { 3, 11, 7 },
+};
+
+  void generateFaces()
+  {
+    for(int face = 0; face < NumFaces; face++) {
+      const int *index = VertexIndex[face];
+      _faces[face] = Face(&_points[index[0]], &_points[index[1]], &_points[index[2]]);
+    }
+  }
+
+  const Vec3 &vertex(int v) const
+  {
+    if(v < 0 || v >= NumPoints) throw IndexOutOfBoundsError(this, v, NumPoints);
+    return _points[v];
+  }
+
+  Face &face(int f)
+  {
+    if(f < 0 || f >= NumFaces) throw IndexOutOfBoundsError(this, f, NumFaces);
+    return _faces[f];
+  }
+
+  const Face &face(int f) const
+  {
+    if(f < 0 || f >= NumFaces) throw IndexOutOfBoundsError(this, f, NumFaces);
+    return _faces[f];
+  }
+
+  const Face &neighbor(int f, int neighbor) const
+  {
+    if(f < 0 || f >= NumFaces) throw IndexOutOfBoundsError(this, f, NumFaces);
+    if(neighbor < 0 || neighbor >= 3) throw IndexOutOfBoundsError(this, neighbor, 3);
+    return face(NeighborIndex[f][neighbor]);
+  }
+
+  const Face &pointNeighbor(int f, int point, int neighbor) const
+  {
+    if(f < 0 || f >= NumFaces) throw IndexOutOfBoundsError(this, f, NumFaces);
+    if(point < 0 || point >= 3) throw IndexOutOfBoundsError(this, point, 3);
+    if(neighbor < 0 || neighbor >= 3) throw IndexOutOfBoundsError(this, neighbor, 3);
+    return face(PointNeighborIndex[f][point][neighbor]);
+  }
+
+  Real radius() const { return _radius; }
+};
+

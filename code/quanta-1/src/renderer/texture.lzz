@@ -1,0 +1,59 @@
+#hdr
+#include <string>
+#include <SDL2/SDL.h>
+#end
+
+#src
+#include <iostream>
+#end
+
+class Texture
+{
+  std::string _path;
+  bool _repeat_x, _repeat_y;
+  SDL_Surface *_surface;
+
+public:
+  Texture(const std::string &path, bool repeat_x = true, bool repeat_y = true)
+    : _path(path), _repeat_x(repeat_x), _repeat_y(repeat_y), _surface(NULL)
+  {
+  }
+
+  virtual ~Texture()
+  {
+    unload();
+  }
+
+  const std::string &path() const { return _path; }
+
+  bool loaded() const { return _surface != NULL; }
+
+  void unload()
+  {
+    if(_surface) {
+      SDL_FreeSurface(_surface);
+      _surface = NULL;
+    }
+  }
+
+  bool load()
+  {
+    SDL_Surface *bmp = SDL_LoadBMP(_path.c_str());
+    if(bmp != NULL) {
+      unload();
+      _surface = bmp;
+      return true;
+    } else {
+      std::cerr << "Error loading " << _path << ": " << SDL_GetError() << std::endl;
+      return false;
+    }
+  }
+
+  SDL_Surface *surface() const { return _surface; }
+
+  bool repeatsX() const { return _repeat_x; }
+  bool repeatsY() const { return _repeat_y; }
+
+  int width() const { return _surface->w; }
+  int height() const { return _surface->h; }
+};

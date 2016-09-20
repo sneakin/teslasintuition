@@ -1,0 +1,150 @@
+#hdr
+#include "matrix.h"
+#end
+
+class Camera
+{
+  Matrix _matrix;
+
+public:
+  Camera(const Vec3 &position, const Vec3 &forward = Vec3::nZ, const Vec3 &up = Vec3::Y)
+  {
+    setPosition(position);
+    lookAt(forward, up);
+  }
+
+  Vec3 position() const //{ return _position; }
+  {
+    return Vec3(_matrix.get(3,0), _matrix.get(3,1), _matrix.get(3,2));
+  }
+
+  void setPosition(const Vec3 &v)
+  {
+    for(int i = 0; i < 3; i++) {
+      _matrix.set(3, i, v[i]);
+    }
+    _matrix.set(3, 3, 1);
+  }
+
+  Real x() const { return position().x(); }
+  Real y() const { return position().y(); }
+  Real z() const { return position().z(); }
+
+  void setMatrix(const Matrix &m)
+  {
+    _matrix = m;
+  }
+
+  virtual void moveBy(const Vec3 &delta)
+  {
+    //_position += _matrix * delta;
+    _matrix = Matrix::translation(delta) * _matrix;
+  }
+
+  void increasePosition(const Vec3 &delta)
+  {
+    //_position += delta;
+    for(int i = 0; i < 3; i++) {
+      _matrix.set(3, i, _matrix.get(3, i) + delta[i]);
+    }
+  }
+
+  void transformTo(const Matrix &m)
+  {
+    _matrix = _matrix * m;
+  }
+
+  void transformBy(const Matrix &m)
+  {
+    _matrix = m * _matrix;
+  }
+
+  virtual void rotateBy(const Vec3 &angle) {
+    transformBy(Matrix::rotate(angle));
+  }
+
+  //const Vec3 &angle() const { return _angle; }
+
+  Real yaw() const { return M_PI + acosr(Vec3::X.dot(right())); }
+
+  /*
+  Real pitch() const { return _angle.x(); }
+  Real setPitch(Real n) { _angle.setX(n); updateDirections(); }
+  Real setYaw(Real n) { _angle.setY(n); updateDirections(); }
+  Real roll() const { return _angle.z(); }
+  Real setRoll(Real n) { _angle.setZ(n); updateDirections(); }
+  */
+
+  virtual void lookAt(const Vec3 &forward, const Vec3 &up)
+  {
+    _matrix = Matrix::lookAt(forward, up) * translationMatrix();
+  }
+
+  void setUp(const Vec3 &v)
+  {
+    lookAt(forward(), v);
+  }
+
+  Vec3 up() const {
+    return Vec3(_matrix.get(1, 0), _matrix.get(1, 1), _matrix.get(1, 2));
+  }
+
+  void setForward(const Vec3 &v)
+  {
+    lookAt(v, up());
+  }
+
+  Vec3 forward() const {
+    // todo figure why this needs to be negated
+    return -Vec3(_matrix.get(2, 0), _matrix.get(2, 1), _matrix.get(2, 2));
+  }
+
+  Vec3 right() const
+  {
+    return Vec3(_matrix.get(0, 0), _matrix.get(0, 1), _matrix.get(0, 2));
+  }
+
+  Matrix matrix() const
+  {
+    return _matrix;
+    //return rotationMatrix() * translationMatrix();
+  }
+
+  Matrix rotationMatrix() const
+  {
+    Matrix m = _matrix * translationMatrix().invert();
+    return m;
+  }
+
+  void setRotationMatrix(const Matrix &m)
+  {
+    _matrix = m * translationMatrix();
+  }
+
+  Matrix translationMatrix() const
+  {
+    //Real n = negate ? -1.0 : 1.0;
+    return Matrix::translation(position());
+  }
+
+  Vec3 focalPoint(Real render_distance_ratio) const
+  {
+    return position() + forward() * render_distance_ratio * 0.5f;
+  }
+
+  bool canSee(const Vec3 &point, const Vec3 &normal) const
+  {
+    return isFacing(normal) && !wouldClip(point);
+  }
+
+  bool isFacing(const Vec3 &normal) const
+  {
+    return forward().dot(normal) <= 0.2f;
+  }
+
+  bool wouldClip(const Vec3 &point) const
+  {
+    Vec3 v = matrix().invert() * point;
+    return v.z() > 0.0;
+  }
+};

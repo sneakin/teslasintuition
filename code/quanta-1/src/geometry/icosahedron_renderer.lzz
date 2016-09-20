@@ -1,0 +1,72 @@
+#hdr
+#include "renderer.h"
+#include "geometry/icosahedron.h"
+#end
+
+#src
+#include "gl.h"
+#end
+
+class IcosahedronRenderer
+{
+  Renderer &_renderer;
+
+public:
+  IcosahedronRenderer(Renderer &r)
+  : _renderer(r)
+  {
+  }
+
+  void render(const Camera &cam, const Icosahedron &iso)
+  {
+    glBegin(GL_TRIANGLES);
+
+    for(int i = 0; i < Icosahedron::NumFaces; i++) {
+      const Icosahedron::Face &face = iso.face(i);
+      glNormal3rv(face.vertex(0).normalize());
+      glVertex3rv(face.vertex(0));
+      glNormal3rv(face.vertex(1).normalize());
+      glVertex3rv(face.vertex(1));
+      glNormal3rv(face.vertex(2).normalize());
+      glVertex3rv(face.vertex(2));
+    }
+
+    glEnd();
+  }
+
+  void renderNeighbors(const Camera &cam, const Icosahedron &iso)
+  {
+    glPushMatrix(); {
+      glScalef(1.01, 1.01, 1.01);
+
+      glBegin(GL_LINES);
+      for(int face = 0; face < Icosahedron::NumFaces; face++) {
+        for(int n = 0; n < 3; n++) {
+          glColor3rv(Colors::Black);
+          glVertex3rv(iso.face(face).center());
+          glColor3rv(Colors::color(n));
+          glVertex3rv(iso.neighbor(face, n).center());
+        }
+      }
+      glEnd();
+    } glPopMatrix();
+  }
+
+  void renderPointNeighbors(const Camera &cam, const Icosahedron &iso, int point)
+  {
+    glPushMatrix(); {
+      glScalef(1.01, 1.01, 1.01);
+
+      glBegin(GL_LINES);
+      for(int face = 0; face < Icosahedron::NumFaces; face++) {
+        for(int n = 0; n < 3; n++) {
+          glColor3rv(Colors::Black);
+          glVertex3rv(iso.face(face).vertex(point));
+          glColor3rv(Colors::color(n));
+          glVertex3rv(iso.pointNeighbor(face, point, n).center());
+        }
+      }
+      glEnd();
+    } glPopMatrix();
+  }
+};

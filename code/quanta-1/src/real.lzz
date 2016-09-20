@@ -1,0 +1,83 @@
+#hdr
+#include <cmath>
+#include "gl.h"
+
+#ifdef CHEAPER_MATH
+typedef int Integer;
+typedef float Real;
+
+#define ator std::atof
+
+#define fmodr std::fmodf
+#define acosr std::acosf
+#define floorr std::floorf
+#define ceilr std::ceilf
+#define modfr std::modff
+#define atan2r std::atan2f
+#define sqrtr std::sqrtf
+#define rabs std::fabs
+
+#define glVertex3r glVertex3f
+#define glVertex3rv glVertex3fv
+#define glNormal3rv glNormal3fv
+#define glLoadMatrixr glLoadMatrixf
+#define glMultMatrixr glMultMatrixf
+#define glScaler glScalef
+#define glTranslater glTranslatef
+#define glColor3rv glColor3fv
+#define glColor4rv glColor4fv
+#define glLightrv glLightfv
+#define glLightr glLightf
+#define glMaterialrv glMaterialfv
+#define glFogrv glFogfv
+
+#else
+typedef long Integer;
+typedef double Real;
+
+#define ator std::atof
+
+#define fmodr std::fmod
+#define acosr std::acos
+#define floorr std::floor
+#define ceilr std::ceil
+#define modfr std::modf
+#define atan2r std::atan2
+#define sqrtr std::sqrt
+#define rabs std::fabs
+
+#define glVertex3r glVertex3d
+#define glVertex3rv glVertex3dv
+#define glNormal3rv glNormal3dv
+#define glLoadMatrixr glLoadMatrixd
+#define glMultMatrixr glMultMatrixd
+#define glScaler glScaled
+#define glTranslater glTranslated
+#define glColor3rv glColor3dv
+#define glColor4rv glColor4dv
+#define glLightr glLightf
+
+#endif /* CHEAPER_MATH */
+#end
+
+#ifndef CHEAPER_MATH
+
+void glLightrv(GLenum light, GLenum a, const Real v[4])
+{
+  float fv[4] = { (float)v[0], (float)v[1], (float)v[2], (float)v[3] };
+  glLightfv(light, a, fv);
+}
+
+void glFogrv(GLenum name, const Real v[4])
+{
+  float fv[4] = { (float)v[0], (float)v[1], (float)v[2], (float)v[3] };
+  glFogfv(name, fv);
+}
+
+void glMaterialrv(GLenum face, GLenum a, const Real v[4])
+{
+  float fv[4] = { (float)v[0], (float)v[1], (float)v[2], (float)v[3] };
+  glMaterialfv(face, a, fv);
+}
+
+#endif /* CHEAPER_MATH */
