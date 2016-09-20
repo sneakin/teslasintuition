@@ -1,3 +1,9 @@
+all: do-build
+
+PROGRAMS = quanta
+
+quanta_SRC = main.cpp
+
 ifeq ($(shell uname), Darwin)
   MAC=1
 endif
@@ -9,7 +15,12 @@ LDFLAGS+=/opt/local/lib/libstdc++.6.dylib
 FRAMEWORKS=-framework SDL2 -framework opengl
 LDFLAGS+=$(FRAMEWORKS) -L/opt/local/lib
 CFLAGS+=--std=c++0x $(FRAMEWORKS) -DMAC -g -Ivendor/sha1 -Ivendor/gl
-#OBJS+=src/osx.o
+
+define add_osx_object
+        $(1)_SRC += osx.o
+endef
+
+$(foreach prog,$(PROGRAMS),$(eval $(call add_osx_object,$(prog))))
 else # MAC
 LDFLAGS+=-Lvendor/root/lib -lSDL2 -lGL -lGLU
 CFLAGS+=-std=c++0x
@@ -43,23 +54,8 @@ endif
 CFLAGS+=$(MOREFLAGS)
 CXXFLAGS=$(CFLAGS)
 
-all: quanta
+include Makefile.generic
 
-run: quanta
+run: $(BINDIR)/quanta
 	LD_LIBRARY_PATH=vendor/root/lib ./$<
 
-vendor:
-
-ifdef MAC
-src/osx.o: src/osx.cpp
-endif
-
-src/main.o: src/main.cpp src/math-fun.hpp
-
-quanta: src/main.o $(OBJS)
-	g++ $(CFLAGS) $(LDFLAGS) -o $@ $^
-
-clean:
-	rm -f quanta
-	rm -f core
-	rm -f src/*.o

@@ -2,3 +2,5 @@
 *.bak
 *.o
 *.so
+*.depend
+build/*

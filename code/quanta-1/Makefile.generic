@@ -1,0 +1,86 @@
+# Generic Makefile functions and variables to support building to a ./build
+# directory with dependency generation. All that needs to be defined is
+# a list of sources and to add the program to the PROGRAMS variable:
+#
+# program_SRC=hello.cpp util.cpp
+# PROGRAMS += program
+#
+
+all: do-build
+
+.PHONY: all
+
+SRCDIR=src
+
+OUTDIR=build
+CODEDIR=$(OUTDIR)/cpp
+OBJDIR=$(OUTDIR)/obj
+BINDIR=$(OUTDIR)/bin
+DEPDIR=$(OUTDIR)/depends
+
+$(OUTDIR):
+ifeq ($(wildcard $@),)
+	mkdir -p $@
+endif
+
+$(CODEDIR) $(OBJDIR) $(BINDIR): $(OUTDIR)
+ifeq ($(wildcard $@),)
+	mkdir -p $@
+endif
+
+SUBDIRS=$(CODEDIR) $(OBJDIR) $(BINDIR)
+
+.PRECIOUS: $(CODEDIR)/%.cpp
+
+$(CODEDIR)/%.cpp: src/%.lzz
+	mkdir -p $(@D)
+	$(LZZ) -x $(LZZFLAGS) -o $(@D) $<
+
+$(CODEDIR)/%.h: src/%.lzz
+	mkdir -p $(@D)
+	$(LZZ) -x $(LZZFLAGS) -o $(@D) $<
+
+$(OBJDIR)/%.o: $(CODEDIR)/%.cpp
+	mkdir -p $(@D)
+	$(CXX) $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) -c -o $@ $<
+
+$(OBJDIR)/%.o: $(SRCDIR)/%.cpp
+	mkdir -p $(@D)
+	$(CXX) $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) -c -o $@ $<
+
+define PROGRAM_template =
+ OBJECTS = $$(addprefix $(OBJDIR)/, $$(patsubst %.cpp,%.o,$$(patsubst %.lzz,%.o,$$($(1)_SRC))))
+ $$(BINDIR)/$(1): $$(OBJECTS)
+	mkdir -p $$(@D)
+	$$(CXX) $$(CFLAGS) $$(LDFLAGS) -o $$@ $$^
+ ALL_OBJECTS += $$(OBJECTS)
+ ALL_PROGRAMS += $$(BINDIR)/$(1)
+ ALL_SRC += $(call $(1)_SRC)
+endef
+
+$(foreach prog,$(PROGRAMS),$(eval $(call PROGRAM_template,$(prog))))
+
+do-build: do-dirs $(ALL_PROGRAMS)
+
+d-programs:
+	@echo Programs: $(ALL_PROGRAMS)
+	@echo Objects: $(ALL_OBJECTS)
+	@echo Sources: $(ALL_SRC)
+
+.PHONY: do-build d-programs
+
+.PHONY: do-dirs
+do-dirs: $(SUBDIRS)
+
+$(DEPDIR)/%.depend: $(CODEDIR)/%.cpp
+	mkdir -p $(@D)
+	$(CXX) -MM $(CPPFLAGS) $(CXXFLAGS) $^ | sed 's;\([^ ]*\)\.o:;$$(OBJDIR)/\1\.o $$(DEPDIR)/\1\.depend:;' > $@
+
+.depend: $(addprefix $(DEPDIR)/, $(PLANETS_SRC:.lzz=.depend)) $(addprefix $(DEPDIR)/, $(NOISE_TEST_SRC:.lzz=.depend))
+	echo sinclude $^ > .depend
+
+sinclude .depend
+
+.PHONY: clean
+clean:
+	rm -rf $(ALL_OBJECTS) $(ALL_PROGRAMS) $(OUTDIR) .depend
