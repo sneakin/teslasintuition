@@ -6,16 +6,16 @@
 typedef int Integer;
 typedef float Real;
 
-#define ator std::atof
+#define ator atof
 
-#define fmodr std::fmodf
-#define acosr std::acosf
-#define floorr std::floorf
-#define ceilr std::ceilf
-#define modfr std::modff
-#define atan2r std::atan2f
-#define sqrtr std::sqrtf
-#define rabs std::fabs
+#define fmodr fmodf
+#define acosr acosf
+#define floorr floorf
+#define ceilr ceilf
+#define modfr modff
+#define atan2r atan2f
+#define sqrtr sqrtf
+#define rabs fabs
 
 #define glVertex3r glVertex3f
 #define glVertex3rv glVertex3fv
@@ -35,16 +35,16 @@ typedef float Real;
 typedef long Integer;
 typedef double Real;
 
-#define ator std::atof
+#define ator atof
 
-#define fmodr std::fmod
-#define acosr std::acos
-#define floorr std::floor
-#define ceilr std::ceil
-#define modfr std::modf
-#define atan2r std::atan2
-#define sqrtr std::sqrt
-#define rabs std::fabs
+#define fmodr fmod
+#define acosr acos
+#define floorr floor
+#define ceilr ceil
+#define modfr modf
+#define atan2r atan2
+#define sqrtr sqrt
+#define rabs fabs
 
 #define glVertex3r glVertex3d
 #define glVertex3rv glVertex3dv
@@ -57,27 +57,27 @@ typedef double Real;
 #define glColor4rv glColor4dv
 #define glLightr glLightf
 
-#endif /* CHEAPER_MATH */
-#end
-
-#ifndef CHEAPER_MATH
-
-void glLightrv(GLenum light, GLenum a, const Real v[4])
+inline void glLightrv(GLenum light, GLenum a, const Real v[4])
 {
   float fv[4] = { (float)v[0], (float)v[1], (float)v[2], (float)v[3] };
   glLightfv(light, a, fv);
 }
 
-void glFogrv(GLenum name, const Real v[4])
+inline void glFogrv(GLenum name, const Real v[4])
 {
   float fv[4] = { (float)v[0], (float)v[1], (float)v[2], (float)v[3] };
   glFogfv(name, fv);
 }
 
-void glMaterialrv(GLenum face, GLenum a, const Real v[4])
+inline void glMaterialrv(GLenum face, GLenum a, const Real v[4])
 {
   float fv[4] = { (float)v[0], (float)v[1], (float)v[2], (float)v[3] };
   glMaterialfv(face, a, fv);
 }
 
 #endif /* CHEAPER_MATH */
+#end
+
+#src
+/* Make sure it generates. */
+#end
