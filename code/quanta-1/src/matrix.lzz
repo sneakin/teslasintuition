@@ -417,6 +417,31 @@ public:
                   0.0, 0.0, 0.0, 1.0);
   }
 
+  static Matrix perspectiveProjection(Real fovy, Real aspect, Real far, Real near = 0.1)
+  {
+    // From the OpenGL manual https://www.opengl.org/sdk/docs/man2/xhtml/gluPerspective.xml
+    Real f = 1.0 / tan((fovy * M_PI / 180.0) / 2.0);
+    
+    return Matrix(f / aspect, 0, 0, 0,
+                  0, f, 0, 0,
+                  0, 0, (far + near) / (near - far), (2 * far * near) / (near - far),
+                  0, 0, -1, 0);
+  }
+
+  static Matrix frustrum(Real left, Real top, Real right, Real bottom, Real far, Real near)
+  {
+    // From the OpenGL manual https://www.opengl.org/sdk/docs/man2/xhtml/glFrustrum.xml
+    Real a = (right + left) / (right - left);
+    Real b = (top + bottom) / (top - bottom);
+    Real c = (far + near) / (far - near);
+    Real d = (2 * far * near) / (far - near);
+    
+    return Matrix(2 * near / (right - left), 0, a, 0,
+                  0, 2 * near / (top - bottom), b, 0,
+                  0, 0, c, 0,
+                  0, 0, -1, 0);
+  }
+
   Real get(int x, int y) const
   {
     if(x < 0 || x >= 4)
