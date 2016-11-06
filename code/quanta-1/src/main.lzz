@@ -115,15 +115,14 @@ int main(int argc, char *argv[])
   ASSERT_GL_ERROR;
   
   ShaderProgram shader_2d(renderer);
-  VertexShader vertex_2d_shader("shaders/basic_vertex_2d.glsl");
-  shader_2d.attach(vertex_2d_shader);
+  VertexShader vertex_shader("shaders/basic_vertex.glsl");
+  shader_2d.attach(vertex_shader);
   FragmentShader fragment_2d_shader("shaders/basic_fragment.glsl");
   shader_2d.attach(fragment_2d_shader);
   shader_2d.bind_data(0, "outColor");
   shader_2d.relink();
 
   ShaderProgram shaders(renderer);
-  VertexShader vertex_shader("shaders/basic_vertex.glsl");
   shaders.attach(vertex_shader);
   FragmentShader fragment_shader("shaders/basic_lighting.glsl");
   shaders.attach(fragment_shader);
@@ -163,7 +162,7 @@ int main(int argc, char *argv[])
         }
         break;
       case SDL_KEYDOWN:
-        return 0;
+        done = true;
       }
     }
 
@@ -172,6 +171,7 @@ int main(int argc, char *argv[])
     renderer.updateTime(now);
     //renderer.setProjectionMatrix(Matrix::identity());
     //renderer.setModelViewMatrix(Matrix::translation(5.0, 0.0, 0.0) * Matrix::rotateZ(M_PI / 3.0));
+    renderer.setColorMatrix(Matrix::rotate(Vec3(now / 1000.0, now / 1000.0, now / 1000.0)));
     renderer.renderSprite(logo, Vec3(x, y), Vec3(0.5, 0.5), Vec3(scale, scale), now / 1000.0);
     renderer.swap();
     ASSERT_GL_ERROR;
@@ -192,9 +192,6 @@ int main(int argc, char *argv[])
     std::cout << "\tButtons: " << SDL_JoystickNumButtons(joystick) << std::endl;
   }
 
-  glMatrixMode(GL_TEXTURE);
-  glLoadIdentity();
-
   Real spawn_height = 0.0; //-3016.0;
   FPSCamera fps_camera(Vec3(0, spawn_height, 0), Vec3());
   Camera *camera = &fps_camera;
@@ -205,14 +202,9 @@ int main(int argc, char *argv[])
 
   PlayerCommandState player_command_state;
 
-  glMatrixMode(GL_TEXTURE);
-  glLoadIdentity();
-
-  glMatrixMode(GL_COLOR);
-  glLoadIdentity();
-
-  glMatrixMode(GL_MODELVIEW);
-  glLoadIdentity();
+  renderer.setTextureMatrix(Matrix::identity());
+  renderer.setColorMatrix(Matrix::identity());
+  renderer.setModelViewMatrix(Matrix::identity());
 
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LEQUAL);
@@ -254,6 +246,8 @@ int main(int argc, char *argv[])
 
   ScreenShooter screen_shooter(window_width, window_height);
 
+  //done = false;
+  
   while(!done) {
     frame_start = SDL_GetTicks();
     droll = dpitch = dyaw = 0.0;

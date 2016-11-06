@@ -41,7 +41,7 @@ private:
   TextureIdMap _texture_handles;
   GLuint _shader_in_position, _shader_in_color, _shader_in_texture, _shader_uniform_texture, _shader_in_time;
   SquareMesh *_quad;
-  UniformMatrixStack _modelview, _projection, _texture;
+  UniformMatrixStack _modelview, _projection, _texture, _color;
 
 public:
   Renderer(SDL_Window *window)
@@ -213,9 +213,10 @@ public:
     _shader_in_time = glGetAttribLocation(prog_id, "inTime");
     _shader_uniform_texture = glGetUniformLocation(prog_id, "tex");
 
-    _modelview.setLocation(glGetUniformLocation(prog_id, "ModelView"));
-    _projection.setLocation(glGetUniformLocation(prog_id, "Projection"));
-    _texture.setLocation(glGetUniformLocation(prog_id, "TS"));
+    _modelview.setLocation(glGetUniformLocation(prog_id, "mModelView"));
+    _projection.setLocation(glGetUniformLocation(prog_id, "mProjection"));
+    _texture.setLocation(glGetUniformLocation(prog_id, "mTexture"));
+    _color.setLocation(glGetUniformLocation(prog_id, "mColor"));
     
     ASSERT_GL_ERROR;
   }
@@ -253,6 +254,11 @@ public:
   void setTextureMatrix(const Matrix &m)
   {
     _texture.load(m);
+  }
+
+  void setColorMatrix(const Matrix &m)
+  {
+    _color.load(m);
   }
 
   void renderSprite(const Texture &tex, const Vec3 &position, const Vec3 &origin, const Vec3 &size, const Real &angle)
