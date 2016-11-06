@@ -1,0 +1,31 @@
+#hdr
+#include "gl.h"
+#include "renderer.h"
+#include "geometry/icosahedron.h"
+#end
+
+#src
+#end
+
+class IndexBuffer
+{
+private:
+  GLuint _id;
+
+public:
+  IndexBuffer(Renderer &r)
+  {
+    glGenBuffers(1, &_id);
+  }
+
+  ~IndexBuffer()
+  {
+    glDeleteBuffers(1, &_id);
+  }
+
+  void update(const Icosahedron::Face indexes[], int count)
+  {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _id);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Icosahedron::Face) * count, indexes, GL_STATIC_DRAW);
+  }
+};

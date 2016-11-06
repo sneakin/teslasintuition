@@ -36,15 +36,7 @@ public:
 
   Matrix(const Matrix &m)
   {
-#ifdef SLOW_VECTOR    
-    for(int i = 0; i < 4; i++) {
-      for(int j = 0; j < 4; j++) {
-        _values[i*4+j] = m._values[i*4+j];
-      }
-    }
-#else
-    _values = m._values;
-#endif
+    set(m);
   }
 
   Matrix(const RealArray_16 other)
@@ -86,6 +78,19 @@ public:
     set(3, 3, p);
   }
 
+  void set(const Matrix &m)
+  {
+#ifdef SLOW_VECTOR    
+    for(int i = 0; i < 4; i++) {
+      for(int j = 0; j < 4; j++) {
+        _values[i*4+j] = m._values[i*4+j];
+      }
+    }
+#else
+    _values = m._values;
+#endif
+  }
+  
 #ifdef SLOW_VECTOR
 #define BINARY_OP(OP) \
   Matrix operator OP (const Matrix &m) const \
@@ -403,6 +408,15 @@ public:
                   0, 0, 0, 1);
   }
 
+  static Matrix orthographicProjection(Real left, Real top, Real right, Real bottom, Real far, Real near = 0.0)
+  {
+    Real dx = right - left, dy = top - bottom, dz = far - near;
+    return Matrix(2.0 / dx, 0.0, 0.0, -(right + left) / dx,
+                  0.0, 2.0 / dy, 0.0, -(top + bottom) / dy,
+                  0.0, 0.0, -2.0 / dz, -(far + near) / dz,
+                  0.0, 0.0, 0.0, 1.0);
+  }
+
   Real get(int x, int y) const
   {
     if(x < 0 || x >= 4)
@@ -430,6 +444,12 @@ public:
   operator const Real * () const
   {
     return get();
+  }
+
+  Matrix &operator= (const Matrix &m)
+  {
+    set(m);
+    return *this;
   }
 };
 

@@ -1,0 +1,50 @@
+#hdr
+#include "gl.h"
+class Renderer;
+#end
+
+#src
+#include "renderer.h"
+#end
+
+template<typename t>
+class ArrayBuffer
+{
+public:
+  typedef t Element;
+
+private:
+  GLuint _id;
+
+public:
+  ArrayBuffer(Renderer &r)
+  {
+    glGenBuffers(1, &_id);
+    ASSERT_GL_ERROR;
+  }
+
+  ~ArrayBuffer()
+  {
+    glDeleteBuffers(1, &_id);
+    ASSERT_GL_ERROR;
+  }
+
+  void bind()
+  {
+    glBindBuffer(GL_ARRAY_BUFFER, _id);
+    ASSERT_GL_ERROR;
+  }
+
+  void unbind()
+  {
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    ASSERT_GL_ERROR;
+  }
+  
+  void update(const Element vertices[], int count)
+  {
+    bind();
+    glBufferData(GL_ARRAY_BUFFER, sizeof(Element) * count, vertices, GL_STATIC_DRAW);
+    ASSERT_GL_ERROR;
+  }
+};

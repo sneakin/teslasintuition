@@ -1,0 +1,13 @@
+#hdr
+#include "shader.h"
+#end
+
+class FragmentShader: public Shader
+{
+public:
+  FragmentShader(const char *path)
+    : Shader(GL_FRAGMENT_SHADER)
+  {
+    load(path);
+  }
+};

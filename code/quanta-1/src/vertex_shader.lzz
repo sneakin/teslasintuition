@@ -1,0 +1,13 @@
+#hdr
+#include "shader.h"
+#end
+
+class VertexShader: public Shader
+{
+public:
+  VertexShader(const char *path)
+    : Shader(GL_VERTEX_SHADER)
+  {
+    load(path);
+  }
+};

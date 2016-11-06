@@ -2,7 +2,12 @@ all: do-build
 
 PROGRAMS = quanta
 
-quanta_SRC = math-fun.lzz real.lzz vec3.lzz index_out_of_bounds_error.lzz matrix.lzz colors.lzz renderer/material.lzz renderer/texture.lzz renderer/textured_material.lzz renderer/camera.lzz renderer/fps_camera.lzz renderer.lzz geometry/triangle.lzz geometry/icosahedron.lzz geometry/icosahedron_renderer.lzz player_command_state.lzz xpad.lzz quantum.lzz quanta.lzz quanta_renderer.lzz screen_shooter.lzz argument_error.lzz not_found_error.lzz really_not_found_error.lzz  main.cpp
+quanta_SRC = math-fun.lzz real.lzz vec3.lzz index_out_of_bounds_error.lzz matrix.lzz colors.lzz renderer/material.lzz renderer/texture.lzz renderer/textured_material.lzz renderer/camera.lzz renderer/fps_camera.lzz renderer.lzz geometry/triangle.lzz geometry/icosahedron.lzz geometry/icosahedron_renderer.lzz player_command_state.lzz xpad.lzz quantum.lzz quanta.lzz quanta_renderer.lzz screen_shooter.lzz argument_error.lzz not_found_error.lzz really_not_found_error.lzz shader_program.lzz shader.lzz vertex_shader.lzz fragment_shader.lzz vertex_array.lzz array_buffer.lzz index_buffer.lzz uniform_matrix_stack.lzz renderer/square_mesh.lzz stack_with_callback.lzz main.lzz
+
+CFLAGS+=$(GLEW_CFLAGS)
+CXXFLAGS+=$(GLEW_CFLAGS)
+LDFLAGS+=$(GLEW_LDFLAGS) -lGLEW
+#LZZFLAGS+=$(GLEW_CFLAGS)
 
 ifeq ($(shell uname), Darwin)
   MAC=1

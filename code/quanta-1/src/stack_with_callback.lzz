@@ -1,0 +1,61 @@
+#hdr
+#include <stack>
+#end
+
+using std::stack;
+
+template<typename t> class StackWithCallback
+{
+public:
+  typedef t Element;
+  typedef std::stack<Element> Stack;
+
+private:
+  Stack _stack;
+  Element _top, _nil;
+  
+public:
+
+  StackWithCallback(const Element &nil)
+    : _top(nil), _nil(nil)
+  {
+  }
+
+  virtual ~StackWithCallback()
+  {
+  }
+
+  int size() const { return _stack.size(); }
+  
+  void load(const Element &e)
+  {
+    _top = e;
+    updateValue();
+  }
+  
+  void push()
+  {
+    _stack.push(_top);
+  }
+
+  const Element &pop()
+  {
+    if(_stack.empty()) {
+      _top = _nil;
+    } else {
+      _top = _stack.top();
+      _stack.pop();
+    }
+    updateValue();
+    return _top;
+  }
+
+  const Element &top() const
+  {
+    return _top;
+  }
+
+  virtual void updateValue()
+  {
+  }
+};

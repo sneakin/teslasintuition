@@ -1,0 +1,66 @@
+#hdr
+#include <string>
+#include "gl.h"
+#include "renderer.h"
+#include "shader.h"
+#end
+
+class ShaderProgram;
+
+class ShaderProgramLinkError
+{
+  ShaderProgram &_program;
+  std::string _msg;
+
+public:
+  ShaderProgramLinkError(ShaderProgram &p, const std::string &msg)
+    : _program(p), _msg(msg)
+  {
+  }
+};
+
+class ShaderProgram
+{
+  Renderer &_renderer;
+  GLuint _id;
+
+public:
+  ShaderProgram(Renderer &r)
+    : _renderer(r)
+  {
+    _id = glCreateProgram();
+    ASSERT_GL_ERROR;
+  }
+
+  ~ShaderProgram()
+  {
+    glDeleteProgram(_id);
+  }
+
+  void attach(Shader &shader)
+  {
+    glAttachShader(_id, shader.id());
+  }
+
+  void relink()
+  {
+    glLinkProgram(_id);
+    GLint ok = GL_TRUE;
+    glGetProgramiv(_id, GL_LINK_STATUS, &ok);
+    if(ok != GL_TRUE) {
+      GLchar msg[1024];
+      glGetShaderInfoLog(_id, 1024, NULL, msg);
+      throw ShaderProgramLinkError(*this, msg);
+    }
+  }
+
+  void bind()
+  {
+    _renderer.useProgram(_id);
+  }
+
+  void bind_data(GLuint location, const char *name)
+  {
+    glBindFragDataLocation(_id, location, name);
+  }
+};

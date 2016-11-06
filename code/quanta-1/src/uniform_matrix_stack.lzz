@@ -1,0 +1,33 @@
+#hdr
+#include "gl.h"
+#include "stack_with_callback.h"
+#include "matrix.h"
+#end
+
+class UniformMatrixStack: public StackWithCallback<Matrix>
+{
+  GLuint _location;
+
+public:
+  UniformMatrixStack()
+    : StackWithCallback(Matrix::identity()), _location(0)
+  {
+  }
+  
+  virtual ~UniformMatrixStack()
+  {
+  }
+  
+  GLuint location() const { return _location; }
+
+  void setLocation(GLuint n)
+  {
+    _location = n;
+    updateValue();
+  }
+
+  virtual void updateValue()
+  {
+    glUniformMatrix4rv(location(), 1, GL_FALSE, top());
+  }
+};

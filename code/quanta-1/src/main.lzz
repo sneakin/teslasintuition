@@ -7,8 +7,8 @@
 #include <iostream>
 #include <string>
 #include <cmath>
-#include <SDL2/SDL.h>
 #include "gl.h"
+#include <SDL2/SDL.h>
 
 #include "real.h"
 #include "vec3.h"
@@ -22,9 +22,12 @@
 #include "quanta.h"
 #include "quanta_renderer.h"
 #include "screen_shooter.h"
+#include "shader_program.h"
+#include "vertex_shader.h"
+#include "fragment_shader.h"
 
 #define APP_TITLE "Quanta 1"
-#define APP_LOGO "quanta.bmp"
+#define APP_LOGO "logo.bmp"
 #define APP_WIDTH 800
 #define APP_HEIGHT 600
 
@@ -80,8 +83,6 @@ int main(int argc, char *argv[])
     return -1;
   }
 
-  //SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-
   int num_displays = SDL_GetNumVideoDisplays();
   int display = 1;
   cout << "Using display " << display << "/" << num_displays << endl;
@@ -92,25 +93,90 @@ int main(int argc, char *argv[])
     return -1;
   }
 
-  SDL_GLContext gl_context = SDL_GL_CreateContext(window);
-  if(!gl_context) {
-    cout << "Error creating gl context: " << SDL_GetError() << endl;
-    SDL_DestroyWindow(window);
-    return -1;
+  Renderer renderer(window);
+  if(GLEW_VERSION_3_2) {
+    cout << "OpenGL 3.2 supported" << std::endl;
   }
+  if(GLEW_VERSION_3_3) {
+    cout << "OpenGL 3.3 supported" << std::endl;
+  }
+  if(GLEW_ARB_compatibility) {
+    cout << "ARB compatibility supported" << std::endl;
+  }
+  if(!GLEW_ARB_vertex_array_object) {
+    cout << "No vertex array support." << std::endl;
+  }
+  cout << "OpenGL version: " << glGetString(GL_VERSION) << std::endl;
+  cout << "       vendor: " << glGetString(GL_VENDOR) << std::endl;
+  cout << "       renderer: " << glGetString(GL_RENDERER) << std::endl;
+  cout << "       SL version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
+  
 
-  Renderer renderer;
+  ASSERT_GL_ERROR;
+  
+  ShaderProgram shader_2d(renderer);
+  VertexShader vertex_2d_shader("shaders/basic_vertex_2d.glsl");
+  shader_2d.attach(vertex_2d_shader);
+  FragmentShader fragment_2d_shader("shaders/basic_fragment.glsl");
+  shader_2d.attach(fragment_2d_shader);
+  shader_2d.bind_data(0, "outColor");
+  shader_2d.relink();
 
-  /*
-  Texture logo(APP_LOGO);
+  ShaderProgram shaders(renderer);
+  VertexShader vertex_shader("shaders/basic_vertex.glsl");
+  shaders.attach(vertex_shader);
+  FragmentShader fragment_shader("shaders/basic_lighting.glsl");
+  shaders.attach(fragment_shader);
+  shaders.bind_data(0, "outColor");
+  shaders.relink();
+
+  ASSERT_GL_ERROR;
+  
+  Texture logo(APP_TEXTURE_PATH + APP_LOGO);
   if(!renderer.loadTexture(logo)) {
     std::cout << "Error loading " << APP_LOGO << ": " << SDL_GetError() << endl;
     SDL_DestroyWindow(window);
     SDL_Quit();
     return -1;
   }
-  */
 
+  SDL_Event event;
+  bool done = false;
+
+  Real x = 0.0, y = 0.0, scale = 1.0;
+
+  shader_2d.bind();
+  renderer.setProjectionMatrix(Matrix::orthographicProjection(0.0, 10.0, 10.0, 0.0, 100.0, -100.0));
+
+  while(!done) {
+    while(SDL_PollEvent(&event)) {
+      switch(event.type) {
+      case SDL_MOUSEMOTION:
+        x = (Real)event.motion.x / (Real)APP_WIDTH * 10.0;
+        y = 10.0 - (Real)event.motion.y / (Real)APP_HEIGHT * 10.0;
+        break;
+      case SDL_MOUSEBUTTONDOWN:
+        if(event.button.button == SDL_BUTTON_LEFT) {
+          scale *= 2.0;
+        } else {
+          scale *= 0.5;
+        }
+        break;
+      case SDL_KEYDOWN:
+        return 0;
+      }
+    }
+
+    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+    GLuint now = SDL_GetTicks();
+    renderer.updateTime(now);
+    //renderer.setProjectionMatrix(Matrix::identity());
+    //renderer.setModelViewMatrix(Matrix::translation(5.0, 0.0, 0.0) * Matrix::rotateZ(M_PI / 3.0));
+    renderer.renderSprite(logo, Vec3(x, y), Vec3(0.5, 0.5), Vec3(scale, scale), now / 1000.0);
+    renderer.swap();
+    ASSERT_GL_ERROR;
+  }
+  
   SDL_Joystick *joystick = SDL_JoystickOpen(joystick_index);
   if(joystick == NULL) {
     std::cout << "Error opening joystick " << joystick_index << ": " << SDL_GetError() << endl;
@@ -129,33 +195,6 @@ int main(int argc, char *argv[])
   glMatrixMode(GL_TEXTURE);
   glLoadIdentity();
 
-  /*
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
-  glOrtho(0.0, 0.0, 1.0, 1.0, 0.0, 100.0);
-
-  glMatrixMode(GL_MODELVIEW);
-  glLoadIdentity();
-
-  glEnable(GL_TEXTURE_2D);
-  Real w = 1.0, h = 1.0;
-  renderer.bindTexture(logo);
-
-  glBegin(GL_QUADS);
-  glTexCoord2f(0.0, 0.0);
-  glVertex2f(-1.0, -1.0);
-  glTexCoord2f(0.0, h);
-  glVertex2f(-1.0, 1.0);
-  glTexCoord2f(w, h);
-  glVertex2f(1.0, 1.0);
-  glTexCoord2f(w, 0.0);
-  glVertex2f(1.0, -1.0);
-  glEnd();
-
-  renderer.unbindTexture();
-  SDL_GL_SwapWindow(window);
-  */
-
   Real spawn_height = 0.0; //-3016.0;
   FPSCamera fps_camera(Vec3(0, spawn_height, 0), Vec3());
   Camera *camera = &fps_camera;
@@ -165,9 +204,6 @@ int main(int argc, char *argv[])
   QuantaRenderer quanta_renderer(renderer);
 
   PlayerCommandState player_command_state;
-
-  SDL_Event event;
-  bool done = false;
 
   glMatrixMode(GL_TEXTURE);
   glLoadIdentity();
@@ -646,16 +682,13 @@ int main(int argc, char *argv[])
       //quanta_renderer.renderVelocities(*view_camera, quanta);
     } glPopMatrix();
 
-    SDL_GL_SwapWindow(window);
-    ASSERT_GL_ERROR;
-
+    renderer.swap();
     screen_shooter.takeScreenShot();
 
     frames++;
     ms_per_frame = SDL_GetTicks() - frame_start;
   }
 
-  SDL_GL_DeleteContext(gl_context);
   SDL_DestroyWindow(window);
   SDL_Quit();
 

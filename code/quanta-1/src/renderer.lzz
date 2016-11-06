@@ -3,25 +3,72 @@
 #include "renderer/material.h"
 #include "renderer/texture.h"
 #include "renderer/camera.h"
+#include "uniform_matrix_stack.h"
+#include "renderer/square_mesh.h"
 #end
 
 #src
 #include <SDL2/SDL.h>
 #include "gl.h"
+#include "real.h"
+#include <assert.h>
 #end
+
+class RendererError
+{
+private:
+  const char *_context, *_msg;
+  std::string _what;
+
+public:
+  RendererError(const char *context, const char *msg)
+    : _context(context), _msg(msg), _what(context)
+  {
+    _what += ": ";
+    _what += _msg;
+  }
+
+  const std::string &what() const { return _what; }
+};
 
 class Renderer
 {
 public:
   typedef std::map<const Texture *, GLuint> TextureIdMap;
 private:
+  SDL_GLContext _gl_context;
+  SDL_Window *_window;
   TextureIdMap _texture_handles;
-public:
-  Renderer() { }
+  GLuint _shader_in_position, _shader_in_color, _shader_in_texture, _shader_uniform_texture, _shader_in_time;
+  SquareMesh *_quad;
+  UniformMatrixStack _modelview, _projection, _texture;
 
-  Renderer(const Renderer &r)
+public:
+  Renderer(SDL_Window *window)
+    : _window(window)
   {
-    throw "fuck";
+    //SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+
+    // use OpenGL 3.3+
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
+
+    _gl_context = SDL_GL_CreateContext(_window);
+    if(!_gl_context) {
+      throw RendererError("OpenGL context", SDL_GetError());
+    }
+
+    glewExperimental = GL_TRUE;
+    GLenum err = glewInit();
+    if(err != GLEW_OK) {
+      throw RendererError("OpenGL init failed", (const char *)glewGetErrorString(err));
+    }
+
+    ASSERT_GL_ERROR;
+
+    _quad = new SquareMesh(*this);
   }
 
   virtual ~Renderer()
@@ -29,6 +76,16 @@ public:
     for(TextureIdMap::iterator it = _texture_handles.begin(); it != _texture_handles.end(); it++) {
       glDeleteTextures(1, &it->second);
     }
+
+    delete _quad;
+    
+    SDL_GL_DeleteContext(_gl_context);
+  }
+
+  void swap()
+  {
+    SDL_GL_SwapWindow(_window);
+    ASSERT_GL_ERROR;
   }
 
   void bindMaterial(GLenum face, const Material &m)
@@ -56,18 +113,29 @@ public:
 
   void bindTexture(const Texture &tex)
   {
+    glActiveTexture(GL_TEXTURE0);
+    glUniform1i(_shader_uniform_texture, 0);
     glBindTexture(GL_TEXTURE_2D, findTextureHandle(tex));
+    ASSERT_GL_ERROR;
   }
 
   void unbindTexture()
   {
     glBindTexture(GL_TEXTURE_2D, 0);
+    ASSERT_GL_ERROR;
   }
 
   bool loadTexture(Texture &tex)
   {
+    return loadTexture(tex, 0, 4);
+  }
+  
+  bool loadTexture(Texture &tex, GLuint tex_unit, int num_mipmaps = 4)
+  {
     GLuint tex_id;
     GLenum mode = GL_RGBA;
+
+    assert(tex_unit < GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS);
 
     if(!tex.loaded()) {
       if(!tex.load()) {
@@ -100,21 +168,21 @@ public:
     }
 
     //glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glPixelStorei(GL_UNPACK_ROW_LENGTH, surf->w);
-    ASSERT_GL_ERROR;
+    //glPixelStorei(GL_UNPACK_ROW_LENGTH, surf->w);
+    //ASSERT_GL_ERROR;
     glGenTextures(1, &tex_id);
     ASSERT_GL_ERROR;
     glBindTexture(GL_TEXTURE_2D, tex_id);
     ASSERT_GL_ERROR;
-    //glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
-    //ASSERT_GL_ERROR;
+    glActiveTexture(GL_TEXTURE0 + tex_unit);
+    ASSERT_GL_ERROR;
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
     ASSERT_GL_ERROR;
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
     ASSERT_GL_ERROR;
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, tex.repeatsX() ? GL_REPEAT : GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, tex.repeatsX() ? GL_REPEAT : GL_CLAMP_TO_BORDER);
     ASSERT_GL_ERROR;
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, tex.repeatsY() ? GL_REPEAT : GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, tex.repeatsY() ? GL_REPEAT : GL_CLAMP_TO_BORDER);
     ASSERT_GL_ERROR;
     glTexImage2D(GL_TEXTURE_2D, 0, mode, surf->w, surf->h, 0, mode, GL_UNSIGNED_BYTE, surf->pixels);
     ASSERT_GL_ERROR;
@@ -122,7 +190,8 @@ public:
     ASSERT_GL_ERROR;
 
     glBindTexture(GL_TEXTURE_2D, 0);
-
+    ASSERT_GL_ERROR;
+    
     _texture_handles[&tex] = tex_id;
 
     SDL_FreeSurface(surf);
@@ -130,7 +199,77 @@ public:
     return true;
   }
 
-  void renderCameraAxis(const Camera &camera)
+  void useProgram(GLuint prog_id)
+  {
+    glUseProgram(prog_id);
+    bindUniforms(prog_id);
+  }
+
+  void bindUniforms(GLuint prog_id)
+  {
+    _shader_in_position = glGetAttribLocation(prog_id, "inPosition");
+    _shader_in_color = glGetAttribLocation(prog_id, "inColor");
+    _shader_in_texture = glGetAttribLocation(prog_id, "inTexture");
+    _shader_in_time = glGetAttribLocation(prog_id, "inTime");
+    _shader_uniform_texture = glGetUniformLocation(prog_id, "tex");
+
+    _modelview.setLocation(glGetUniformLocation(prog_id, "ModelView"));
+    _projection.setLocation(glGetUniformLocation(prog_id, "Projection"));
+    _texture.setLocation(glGetUniformLocation(prog_id, "TS"));
+    
+    ASSERT_GL_ERROR;
+  }
+
+  GLuint shaderInPositionAttrib() const
+  {
+    return _shader_in_position;
+  }
+
+  GLuint shaderInColorAttrib() const
+  {
+    return _shader_in_color;
+  }
+
+  GLuint shaderInTextureAttrib() const
+  {
+    return _shader_in_texture;
+  }
+
+  void updateTime(GLuint t)
+  {
+    glUniform1i(_shader_in_time, t);
+  }
+
+  void setProjectionMatrix(const Matrix &m)
+  {
+    _projection.load(m);
+  }
+
+  void setModelViewMatrix(const Matrix &m)
+  {
+    _modelview.load(m);
+  }
+
+  void setTextureMatrix(const Matrix &m)
+  {
+    _texture.load(m);
+  }
+
+  void renderSprite(const Texture &tex, const Vec3 &position, const Vec3 &origin, const Vec3 &size, const Real &angle)
+  {
+    _modelview.push();
+    _modelview.load(Matrix::translation(-origin) * Matrix::scale(size) * Matrix::rotateZ(angle) * Matrix::translation(position) * _modelview.top());
+    bindTexture(tex);
+    ASSERT_GL_ERROR;
+    _quad->bind();
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    ASSERT_GL_ERROR;
+    _quad->unbind();
+    _modelview.pop();
+    unbindTexture();
+  }
+
+ void renderCameraAxis(const Camera &camera)
   {
     glBegin(GL_LINES);
     glColor3rv(Colors::Red);

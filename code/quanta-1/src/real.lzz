@@ -6,6 +6,8 @@
 typedef int Integer;
 typedef float Real;
 
+#define GL_REAL GL_FLOAT
+
 #define ator atof
 
 #define fmodr fmodf
@@ -31,9 +33,13 @@ typedef float Real;
 #define glMaterialrv glMaterialfv
 #define glFogrv glFogfv
 
+#define glUniformMatrix4rv glUniformMatrix4fv
+
 #else
 typedef long Integer;
 typedef double Real;
+
+#define GL_REAL GL_DOUBLE
 
 #define ator atof
 
@@ -74,6 +80,8 @@ inline void glMaterialrv(GLenum face, GLenum a, const Real v[4])
   float fv[4] = { (float)v[0], (float)v[1], (float)v[2], (float)v[3] };
   glMaterialfv(face, a, fv);
 }
+
+#define glUniformMatrix4rv glUniformMatrix4dv
 
 #endif /* CHEAPER_MATH */
 #end

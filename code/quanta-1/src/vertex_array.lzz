@@ -1,0 +1,49 @@
+#hdr
+#include "gl.h"
+class Renderer;
+#end
+
+#src
+#include "renderer.h"
+#end
+
+class VertexArray
+{
+private:
+  GLuint _id;
+
+public:
+  VertexArray(Renderer &r)
+    : _id(0)
+  {
+    glGenVertexArrays(1, &_id);
+    ASSERT_GL_ERROR;
+    bind();
+  }
+
+  ~VertexArray()
+  {
+    glDeleteVertexArrays(1, &_id);
+    ASSERT_GL_ERROR;
+  }
+
+  void bind()
+  {
+    glBindVertexArray(_id);
+    ASSERT_GL_ERROR;
+  }
+
+  void unbind()
+  {
+    glBindVertexArray(0);
+    ASSERT_GL_ERROR;
+  }
+
+  void enableAttribute(GLuint n, GLuint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid *ptr)
+  {
+    glVertexAttribPointer(n, size, type, normalized, stride, ptr);
+    ASSERT_GL_ERROR;
+    glEnableVertexAttribArray(n);
+    ASSERT_GL_ERROR;
+  }
+};

@@ -1,0 +1,79 @@
+#hdr
+#include <string>
+using std::string;
+
+#include "gl.h"
+#end
+
+#src
+#include <fstream>
+using std::ifstream;
+using std::istreambuf_iterator;
+#end
+
+class ShaderReadError
+{
+  const char *_path;
+
+public:
+  ShaderReadError(const char *path)
+    : _path(path)
+  {
+  }
+};
+
+class ShaderCompileError
+{
+private:
+  const string &_path, &_txt, &_msg;
+
+public:
+  ShaderCompileError(const string &path, const string &txt, const string &msg)
+    : _path(path), _txt(txt), _msg(msg)
+  {
+  }
+};
+
+class Shader
+{
+  GLuint _id;
+
+public:
+  Shader(GLenum type)
+  {
+    _id = glCreateShader(type);
+  }
+
+  GLuint id() const { return _id; }
+
+  void load(const char *path)
+  {
+    compile(read(path), path);
+  }
+
+  void compile(const string &str, const char *path)
+  {
+    const GLchar *source[1];
+    source[0] = str.c_str();
+    glShaderSource(_id, 1, source, NULL);
+    glCompileShader(_id);
+
+    GLint ok = GL_FALSE;
+    glGetShaderiv(_id, GL_COMPILE_STATUS, &ok);
+    if(ok != GL_TRUE) {
+      GLchar msg[1024];
+      glGetShaderInfoLog(_id, 1024, NULL, msg);
+      throw ShaderCompileError(path, str, msg);
+    }
+  }
+
+  string read(const char *path)
+  {
+    ifstream f(path);
+    if(!f.good()) throw ShaderReadError(path);
+
+    string s;
+    s.assign((istreambuf_iterator<char>(f)), istreambuf_iterator<char>());
+    return s;
+  }
+};

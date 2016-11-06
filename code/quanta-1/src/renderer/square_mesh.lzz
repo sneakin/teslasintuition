@@ -1,0 +1,65 @@
+#hdr
+#include "vertex_array.h"
+#include "array_buffer.h"
+#include "vec3.h"
+#end
+
+#src
+#include "colors.h"
+#end
+
+class Renderer;
+
+class SquareMesh
+{
+  ArrayBuffer<Vec3> _quad_verts, _quad_tex, _quad_color;
+  VertexArray _quad;
+
+public:
+  SquareMesh(Renderer &renderer)
+    : _quad_verts(renderer), _quad_tex(renderer), _quad_color(renderer), _quad(renderer)
+  {
+    Vec3 verts[4] = {
+      Vec3(0.0, 1.0, 0.0), Vec3(0.0, 0.0, 0.0),
+      Vec3(1.0, 1.0, 0.0), Vec3(1.0, 0.0, 0.0)
+    };
+    _quad_verts.update(verts, 4);
+
+    Vec3 color[4] = {
+      Colors::White, Colors::White,
+      Colors::White, Colors::White
+    };
+    _quad_color.update(color, 4);
+
+    Vec3 tex[4] = {
+      Vec3(0.0, 0.0, 0.0), Vec3(0.0, 1.0, 0.0),
+      Vec3(1.0, 0.0, 0.0), Vec3(1.0, 1.0, 0.0)
+    };
+    _quad_tex.update(tex, 4);
+
+    _quad.bind();
+    _quad_verts.bind();
+    _quad.enableAttribute(0, 4, GL_REAL, GL_FALSE, 0, 0);
+    _quad_color.bind();
+    _quad.enableAttribute(1, 4, GL_REAL, GL_FALSE, 0, 0);
+    _quad_tex.bind();
+    _quad.enableAttribute(2, 4, GL_REAL, GL_FALSE, 0, 0);
+    _quad.unbind();
+
+    ASSERT_GL_ERROR;
+  }
+
+  ~SquareMesh()
+  {
+  }
+
+  void bind()
+  {
+    _quad.bind();
+  }
+
+  void unbind()
+  {
+    _quad.unbind();
+  }
+};
