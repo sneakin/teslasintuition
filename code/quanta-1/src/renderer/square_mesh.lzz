@@ -12,12 +12,12 @@ class Renderer;
 
 class SquareMesh
 {
-  ArrayBuffer<Vec3> _quad_verts, _quad_tex, _quad_color;
+  ArrayBuffer<Vec3> _quad_verts, _quad_tex, _quad_color, _quad_normals;
   VertexArray _quad;
 
 public:
   SquareMesh(Renderer &renderer)
-    : _quad_verts(renderer), _quad_tex(renderer), _quad_color(renderer), _quad(renderer)
+    : _quad_verts(renderer), _quad_tex(renderer), _quad_color(renderer), _quad_normals(renderer), _quad(renderer)
   {
     Vec3 verts[4] = {
       Vec3(0.0, 1.0, 0.0), Vec3(0.0, 0.0, 0.0),
@@ -31,6 +31,12 @@ public:
     };
     _quad_color.update(color, 4);
 
+    Vec3 normals[4] = {
+      Vec3::Z, Vec3::Z,
+      Vec3::Z, Vec3::Z
+    };
+    _quad_normals.update(normals, 4);
+
     Vec3 tex[4] = {
       Vec3(0.0, 0.0, 0.0), Vec3(0.0, 1.0, 0.0),
       Vec3(1.0, 0.0, 0.0), Vec3(1.0, 1.0, 0.0)
@@ -42,8 +48,10 @@ public:
     _quad.enableAttribute(0, 4, GL_REAL, GL_FALSE, 0, 0);
     _quad_color.bind();
     _quad.enableAttribute(1, 4, GL_REAL, GL_FALSE, 0, 0);
-    _quad_tex.bind();
+    _quad_normals.bind();
     _quad.enableAttribute(2, 4, GL_REAL, GL_FALSE, 0, 0);
+    _quad_tex.bind();
+    _quad.enableAttribute(3, 4, GL_REAL, GL_FALSE, 0, 0);
     _quad.unbind();
 
     ASSERT_GL_ERROR;

@@ -26,6 +26,11 @@ public:
     updateValue();
   }
 
+  void mul(const Matrix &m)
+  {
+    load(m * top());
+  }
+
   virtual void updateValue()
   {
     glUniformMatrix4rv(location(), 1, GL_FALSE, top());

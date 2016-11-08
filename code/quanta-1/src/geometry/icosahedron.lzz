@@ -8,32 +8,27 @@ class Icosahedron
 public:
   class Face
   {
-    Vec3 *_verts[3];
+    uint32_t _verts[3];
 
   public:
     Face()
     {
       for(int i = 0; i < 3; i++) {
-        _verts[i] = NULL;
+        _verts[i] = 0;
       }
     }
 
-    Face(Vec3 *a, Vec3 *b, Vec3 *c)
+    Face(int a, int b, int c)
     {
       _verts[0] = a;
       _verts[1] = b;
       _verts[2] = c;
     }
 
-    const Vec3 &vertex(int i) const
+    int vertex(int i) const
     {
       if(i < 0 || i >= 3) throw IndexOutOfBoundsError(this, i, 3);
-      return *_verts[i];
-    }
-
-    Vec3 center() const
-    {
-      return (vertex(0) + vertex(1) + vertex(2)) / 3.0;
+      return _verts[i];
     }
   };
 
@@ -241,7 +236,7 @@ static const int VertexIndex[NumFaces][3] = {
   {
     for(int face = 0; face < NumFaces; face++) {
       const int *index = VertexIndex[face];
-      _faces[face] = Face(&_points[index[0]], &_points[index[1]], &_points[index[2]]);
+      _faces[face] = Face(index[0], index[1], index[2]);
     }
   }
 
@@ -250,6 +245,10 @@ static const int VertexIndex[NumFaces][3] = {
     if(v < 0 || v >= NumPoints) throw IndexOutOfBoundsError(this, v, NumPoints);
     return _points[v];
   }
+
+  const Vec3 *vertices() const { return _points; }
+
+  const Face *faces() const { return _faces; }
 
   Face &face(int f)
   {
@@ -261,6 +260,17 @@ static const int VertexIndex[NumFaces][3] = {
   {
     if(f < 0 || f >= NumFaces) throw IndexOutOfBoundsError(this, f, NumFaces);
     return _faces[f];
+  }
+
+  Vec3 centerOf(int n) const
+  {
+    return centerOf(face(n));
+  }
+
+  Vec3 centerOf(const Face &f) const
+  {
+    const Vec3 &a(vertex(f.vertex(0))), &b(vertex(f.vertex(1))), &c(vertex(f.vertex(2)));
+    return (a + b + c) / 3.0;
   }
 
   const Face &neighbor(int f, int neighbor) const

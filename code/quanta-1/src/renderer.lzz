@@ -39,13 +39,14 @@ private:
   SDL_GLContext _gl_context;
   SDL_Window *_window;
   TextureIdMap _texture_handles;
-  GLuint _shader_in_position, _shader_in_color, _shader_in_texture, _shader_uniform_texture, _shader_in_time;
+  GLuint _shader_in_position, _shader_in_color, _shader_in_texture, _shader_uniform_color, _shader_uniform_texture, _shader_in_time, _shader_uniform_light0_position, _shader_uniform_light0_intensity, _shader_uniform_light0_color, _shader_uniform_light0_specular, _shader_uniform_ambient_light, _shader_uniform_forward, _shader_uniform_camera;
   SquareMesh *_quad;
   UniformMatrixStack _modelview, _projection, _texture, _color;
+  Vec3 _uniform_color;
 
 public:
   Renderer(SDL_Window *window)
-    : _window(window)
+    : _window(window), _uniform_color(Colors::White)
   {
     //SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
@@ -54,6 +55,7 @@ public:
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
 
     _gl_context = SDL_GL_CreateContext(_window);
     if(!_gl_context) {
@@ -69,6 +71,8 @@ public:
     ASSERT_GL_ERROR;
 
     _quad = new SquareMesh(*this);
+
+    blankDefaultTexture();
   }
 
   virtual ~Renderer()
@@ -88,6 +92,24 @@ public:
     ASSERT_GL_ERROR;
   }
 
+  void setClearColor(const Vec3 &c)
+  {
+    glClearColor(c.x(), c.y(), c.z(), c.w());
+  }
+
+  void clear()
+  {
+    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+  }
+
+  void blankDefaultTexture()
+  {
+    unbindTexture();
+    Vec3 p[4] = { Colors::White, Colors::White, Colors::White, Colors::White };
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_REAL, p);
+    ASSERT_GL_ERROR;
+  }
+  
   void bindMaterial(GLenum face, const Material &m)
   {
     glMateriali(face, GL_SHININESS, m.shininess());
@@ -203,6 +225,7 @@ public:
   {
     glUseProgram(prog_id);
     bindUniforms(prog_id);
+    setColor(_uniform_color);
   }
 
   void bindUniforms(GLuint prog_id)
@@ -211,7 +234,16 @@ public:
     _shader_in_color = glGetAttribLocation(prog_id, "inColor");
     _shader_in_texture = glGetAttribLocation(prog_id, "inTexture");
     _shader_in_time = glGetAttribLocation(prog_id, "inTime");
+
+    _shader_uniform_color = glGetUniformLocation(prog_id, "uColor");
     _shader_uniform_texture = glGetUniformLocation(prog_id, "tex");
+    _shader_uniform_light0_position = glGetUniformLocation(prog_id, "uLight0Position");
+    _shader_uniform_light0_intensity = glGetUniformLocation(prog_id, "uLight0Intensity");
+    _shader_uniform_light0_color = glGetUniformLocation(prog_id, "uLight0Color");
+    _shader_uniform_light0_specular = glGetUniformLocation(prog_id, "uLight0Specular");
+    _shader_uniform_ambient_light = glGetUniformLocation(prog_id, "uAmbientLight");
+    _shader_uniform_forward = glGetUniformLocation(prog_id, "uForward");
+    _shader_uniform_camera = glGetUniformLocation(prog_id, "uCamera");
 
     _modelview.setLocation(glGetUniformLocation(prog_id, "mModelView"));
     _projection.setLocation(glGetUniformLocation(prog_id, "mProjection"));
@@ -246,9 +278,29 @@ public:
     _projection.load(m);
   }
 
+  void mulProjectionMatrix(const Matrix &m)
+  {
+    _projection.mul(m);
+  }
+
   void setModelViewMatrix(const Matrix &m)
   {
     _modelview.load(m);
+  }
+
+  void mulModelViewMatrix(const Matrix &m)
+  {
+    _modelview.mul(m);
+  }
+
+  void pushModelViewMatrix()
+  {
+    _modelview.push();
+  }
+
+  void popModelViewMatrix()
+  {
+    _modelview.pop();
   }
 
   void setTextureMatrix(const Matrix &m)
@@ -256,15 +308,44 @@ public:
     _texture.load(m);
   }
 
+  void setColor(const Vec3 &c)
+  {
+    _uniform_color = c;
+    glUniform4rv(_shader_uniform_color, 1, c);
+    ASSERT_GL_ERROR;
+  }
+  
   void setColorMatrix(const Matrix &m)
   {
     _color.load(m);
   }
 
+  void pushColorMatrix()
+  {
+    _color.push();
+  }
+
+  void popColorMatrix()
+  {
+    _color.pop();
+  }
+
+  void mulColorMatrix(const Matrix &m)
+  {
+    _color.mul(m);
+  }
+
+  void setCamera(const Camera &camera)
+  {
+    glUniform3rv(_shader_uniform_forward, 1, camera.forward());
+    glUniform3rv(_shader_uniform_camera, 1, camera.position());
+    setModelViewMatrix(camera.matrix().invert());
+  }
+  
   void renderSprite(const Texture &tex, const Vec3 &position, const Vec3 &origin, const Vec3 &size, const Real &angle)
   {
     _modelview.push();
-    _modelview.load(Matrix::translation(-origin) * Matrix::scale(size) * Matrix::rotateZ(angle) * Matrix::translation(position) * _modelview.top());
+    _modelview.mul(Matrix::translation(-origin) * Matrix::scale(size) * Matrix::rotateZ(angle) * Matrix::translation(position));
     bindTexture(tex);
     ASSERT_GL_ERROR;
     _quad->bind();
@@ -366,4 +447,39 @@ public:
     glVertex3rv(b);
     glEnd();
   }
+
+  void setViewport(int top, int left, int width, int height)
+  {
+    glViewport(top, left, width, height);
+  }
+  
+  uint32_t createPointLight(const Vec3 &position, Real attenuation, const Vec3 &color, const Vec3 &specular)
+  {
+    moveLight(0, position);
+    glUniform1r(_shader_uniform_light0_intensity, attenuation);
+    ASSERT_GL_ERROR;
+    glUniform3rv(_shader_uniform_light0_color, 1, color);
+    ASSERT_GL_ERROR;
+    glUniform4rv(_shader_uniform_light0_specular, 1, specular);
+    ASSERT_GL_ERROR;
+    return 0;
+    // glLightr(GL_LIGHT0, GL_CONSTANT_ATTENUATION, attenuation);
+    // glLightrv(GL_LIGHT0, GL_DIFFUSE, color);
+    // glLightrv(GL_LIGHT0, GL_SPECULAR, specular);
+
+    // glEnable(GL_LIGHT0);
+  }
+
+  void setAmbientLight(const Vec3 &color)
+  {
+    glUniform3rv(_shader_uniform_ambient_light, 1, color);
+    //glLightrv(GL_LIGHT0, GL_AMBIENT, color);
+  }
+
+  void moveLight(uint32_t id, const Vec3 &position)
+  {
+    glUniform4rv(_shader_uniform_light0_position, 1, _modelview.top() * position);
+    ASSERT_GL_ERROR;
+    //glLightrv(GL_LIGHT0, GL_POSITION, position);
+  }    
 };

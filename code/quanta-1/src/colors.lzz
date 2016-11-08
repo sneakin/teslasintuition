@@ -8,6 +8,7 @@ public:
   static const Vec3 Clear = Vec3(1, 1, 1, 0);
   static const Vec3 Opaque = Vec3(1, 1, 1, 1);
   static const Vec3 White = Vec3(1, 1, 1);
+  static const Vec3 Gray = Vec3(0.5, 0.5, 0.5);
   static const Vec3 Black = Vec3(0, 0, 0);
   static const Vec3 Red = Vec3(1, 0, 0);
   static const Vec3 Green = Vec3(0, 1, 0);

@@ -49,7 +49,7 @@ public:
     glGetProgramiv(_id, GL_LINK_STATUS, &ok);
     if(ok != GL_TRUE) {
       GLchar msg[1024];
-      glGetShaderInfoLog(_id, 1024, NULL, msg);
+      glGetProgramInfoLog(_id, 1024, NULL, msg);
       throw ShaderProgramLinkError(*this, msg);
     }
   }

@@ -7,8 +7,12 @@
 #src
 #end
 
+template<typename t>
 class IndexBuffer
 {
+public:
+  typedef t Element;
+  
 private:
   GLuint _id;
 
@@ -23,9 +27,19 @@ public:
     glDeleteBuffers(1, &_id);
   }
 
-  void update(const Icosahedron::Face indexes[], int count)
+  void bind()
   {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _id);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Icosahedron::Face) * count, indexes, GL_STATIC_DRAW);
+  }
+
+  void unbind()
+  {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+  }
+  
+  void update(const Element indexes[], int count)
+  {
+    bind();
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Element) * count, indexes, GL_STATIC_DRAW);
   }
 };

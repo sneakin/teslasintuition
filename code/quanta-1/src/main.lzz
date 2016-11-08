@@ -123,7 +123,8 @@ int main(int argc, char *argv[])
   shader_2d.relink();
 
   ShaderProgram shaders(renderer);
-  shaders.attach(vertex_shader);
+  VertexShader vertex_3d_shader("shaders/basic_vertex_3d.glsl");
+  shaders.attach(vertex_3d_shader);
   FragmentShader fragment_shader("shaders/basic_lighting.glsl");
   shaders.attach(fragment_shader);
   shaders.bind_data(0, "outColor");
@@ -146,6 +147,9 @@ int main(int argc, char *argv[])
 
   shader_2d.bind();
   renderer.setProjectionMatrix(Matrix::orthographicProjection(0.0, 10.0, 10.0, 0.0, 100.0, -100.0));
+  //renderer.setProjectionMatrix(Matrix::identity());
+  //renderer.setModelViewMatrix(Matrix::translation(5.0, 0.0, 0.0) * Matrix::rotateZ(M_PI / 3.0));
+  renderer.setClearColor(Colors::Black);
 
   while(!done) {
     while(SDL_PollEvent(&event)) {
@@ -166,13 +170,14 @@ int main(int argc, char *argv[])
       }
     }
 
-    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+    renderer.clear();
     GLuint now = SDL_GetTicks();
     renderer.updateTime(now);
-    //renderer.setProjectionMatrix(Matrix::identity());
-    //renderer.setModelViewMatrix(Matrix::translation(5.0, 0.0, 0.0) * Matrix::rotateZ(M_PI / 3.0));
     renderer.setColorMatrix(Matrix::rotate(Vec3(now / 1000.0, now / 1000.0, now / 1000.0)));
-    renderer.renderSprite(logo, Vec3(x, y), Vec3(0.5, 0.5), Vec3(scale, scale), now / 1000.0);
+    renderer.setColor(Vec3(1.0, 0.0, 0.0, 1.0));
+    renderer.renderSprite(logo, Vec3(x, y, 100.0), Vec3(0.5, 0.5), Vec3(scale, scale), now / 1000.0);
+    renderer.setColor(Vec3(Colors::White));
+    renderer.renderSprite(logo, Vec3(0.0, 0.0, -100.0), Vec3(0.5, 0.5), Vec3(scale, scale), now / 1000.0);
     renderer.swap();
     ASSERT_GL_ERROR;
   }
@@ -220,23 +225,6 @@ int main(int argc, char *argv[])
   glFogi(GL_FOG_END, far_plane / 2.0);
   */
   
-  glEnable(GL_LIGHTING);
-  glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 1);
-
-  glShadeModel(GL_SMOOTH);
-  glEnable(GL_COLOR_MATERIAL);
-
-  //glLightModelrv(GL_LIGHT_MODEL_AMBIENT, s.sky());
-  //glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
-
-  Vec3 light_color(1.0, 1.0, 1.0);
-  glLightr(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 0.1); //brightness);
-  glLightrv(GL_LIGHT0, GL_DIFFUSE, light_color);
-  glLightrv(GL_LIGHT0, GL_SPECULAR, Colors::White);
-  glLightrv(GL_LIGHT0, GL_AMBIENT, light_color * 0.01);
-
-  glEnable(GL_LIGHT0);
-
   Real speed = 16.0;
   Real droll = 0.0, dpitch = 0.0, dyaw = 0.0;
 
@@ -246,8 +234,13 @@ int main(int argc, char *argv[])
 
   ScreenShooter screen_shooter(window_width, window_height);
 
-  //done = false;
+  done = false;
+  shaders.bind();
   
+  Vec3 light_color(Colors::White), spec_color(1.0, 1.0, 1.0, 48.0);
+  uint32_t light_id = renderer.createPointLight(Vec3(0.0, 50.0, 0.0, 1.0), 100.0, light_color, spec_color);
+  renderer.setAmbientLight(light_color * 0.1);
+
   while(!done) {
     frame_start = SDL_GetTicks();
     droll = dpitch = dyaw = 0.0;
@@ -472,7 +465,7 @@ int main(int argc, char *argv[])
         case SDL_WINDOWEVENT_RESIZED:
           window_width = event.window.data1;
           window_height = event.window.data2;
-          glViewport(0, 0, window_width, window_height);
+          renderer.setViewport(0, 0, window_width, window_height);
           screen_shooter.setWindowSize(window_width, window_height);
           break;
         }
@@ -654,27 +647,29 @@ int main(int argc, char *argv[])
 
     quanta.update(1.0);
 
-    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
+    renderer.clear();
+    renderer.setProjectionMatrix(Matrix::perspectiveProjection(80.0, (Real)window_width / (Real)window_height, far_plane, near_plane));
+    renderer.setCamera(*camera);
+    Vec3 light_pos(Matrix::rotateZ(SDL_GetTicks() * M_PI / 1000.0 / 8.0) * Matrix::rotateY(SDL_GetTicks() * M_PI / 1000.0 / 4.0) * Vec3(16.0, 0.0, 0.0));
+    //Vec3 light_pos(Vec3(0.0, 0.0, 10.0));
+    renderer.moveLight(light_id, light_pos);
+    //renderer.moveLight(light_id, Vec3(0,  far_plane * 2, 0, 1));
 
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluPerspective(80.0, (Real)window_width / (Real)window_height, near_plane, far_plane);
-
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-
-    glLoadMatrixr(camera->matrix().invert());
-    //glMultMatrixf(camera->rotationMatrix().invert());
-
-    glLightrv(GL_LIGHT0, GL_POSITION, Vec3(0,  far_plane * 2, 0, 1));
-
-    Camera c(*view_camera);
-    c.setPosition(Vec3());
-
-    glPushMatrix(); {
+    glDisable(GL_CULL_FACE);
+    renderer.setColor(Colors::White * Vec3(1.0, 1.0, 1.0, 0.0));
+    renderer.renderSprite(logo, light_pos, Vec3(0.5, 0.5), Vec3(1.0, 1.0, 1.0), 0.0);
+    renderer.renderSprite(logo, Vec3(0.0, 0.0, -5.0), Vec3(0.5, 0.5), Vec3(40.0, 40.0, 1.0), 0.0);
+    renderer.pushModelViewMatrix();
+    //renderer.mulModelViewMatrix(Matrix::rotateX(SDL_GetTicks() / 1000.0 * M_PI / 8.0));
+    renderer.mulModelViewMatrix(Matrix::rotateX(-M_PI / 2.0) * Matrix::translation(Vec3::Y * -10.0));
+    renderer.renderSprite(logo, Vec3(0.0, 0.0, 0.0), Vec3(0.5, 0.5), Vec3(40.0, 40.0, 1.0), 0.0);
+    renderer.popModelViewMatrix();
+    glEnable(GL_CULL_FACE);
+    
+    renderer.pushModelViewMatrix(); {
       quanta_renderer.render(*view_camera, quanta);
       //quanta_renderer.renderVelocities(*view_camera, quanta);
-    } glPopMatrix();
+    } renderer.popModelViewMatrix();
 
     renderer.swap();
     screen_shooter.takeScreenShot();

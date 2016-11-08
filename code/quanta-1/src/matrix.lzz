@@ -392,6 +392,11 @@ public:
       return lookAt(target - from, up) * translation(from);
   }
 
+  static Matrix scale(const Real x, const Real y, const Real z)
+  {
+    return scale(Vec3(x, y, z));
+  }
+  
   static Matrix scale(const Vec3 &v)
   {
     return Matrix(v.x(), 0, 0, 0,

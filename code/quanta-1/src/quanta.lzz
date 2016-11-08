@@ -34,6 +34,7 @@ public:
 
   void push_back(Quantum *q)
   {
+    std::cerr << "Created new quantum" << q->position() << std::endl;
     _quanta.push_back(q);
   }
 

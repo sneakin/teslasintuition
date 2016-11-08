@@ -33,6 +33,9 @@ typedef float Real;
 #define glMaterialrv glMaterialfv
 #define glFogrv glFogfv
 
+#define glUniform1r glUniform1f
+#define glUniform3rv glUniform3fv
+#define glUniform4rv glUniform4fv
 #define glUniformMatrix4rv glUniformMatrix4fv
 
 #else
@@ -81,6 +84,9 @@ inline void glMaterialrv(GLenum face, GLenum a, const Real v[4])
   glMaterialfv(face, a, fv);
 }
 
+#define glUniform1r glUniform1d
+#define glUniform3rv glUniform3dv
+#define glUniform4rv glUniform4dv
 #define glUniformMatrix4rv glUniformMatrix4dv
 
 #endif /* CHEAPER_MATH */
