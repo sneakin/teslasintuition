@@ -238,7 +238,7 @@ int main(int argc, char *argv[])
   shaders.bind();
   
   Vec3 light_color(Colors::White), spec_color(1.0, 1.0, 1.0, 48.0);
-  uint32_t light_id = renderer.createPointLight(Vec3(0.0, 50.0, 0.0, 1.0), 100.0, light_color, spec_color);
+  uint32_t light_id = renderer.createPointLight(Vec3(0.0, 50.0, 0.0, 1.0), universe_size, light_color, spec_color);
   renderer.setAmbientLight(light_color * 0.1);
 
   while(!done) {
@@ -650,22 +650,10 @@ int main(int argc, char *argv[])
     renderer.clear();
     renderer.setProjectionMatrix(Matrix::perspectiveProjection(80.0, (Real)window_width / (Real)window_height, far_plane, near_plane));
     renderer.setCamera(*camera);
-    Vec3 light_pos(Matrix::rotateZ(SDL_GetTicks() * M_PI / 1000.0 / 8.0) * Matrix::rotateY(SDL_GetTicks() * M_PI / 1000.0 / 4.0) * Vec3(16.0, 0.0, 0.0));
-    //Vec3 light_pos(Vec3(0.0, 0.0, 10.0));
+    //Vec3 light_pos(Matrix::rotateZ(SDL_GetTicks() * M_PI / 1000.0 / 8.0) * Matrix::rotateY(SDL_GetTicks() * M_PI / 1000.0 / 4.0) * Vec3(16.0, 0.0, 0.0));
+    Vec3 light_pos(Vec3(0.0, 0.0, 0.0));
     renderer.moveLight(light_id, light_pos);
-    //renderer.moveLight(light_id, Vec3(0,  far_plane * 2, 0, 1));
 
-    glDisable(GL_CULL_FACE);
-    renderer.setColor(Colors::White * Vec3(1.0, 1.0, 1.0, 0.0));
-    renderer.renderSprite(logo, light_pos, Vec3(0.5, 0.5), Vec3(1.0, 1.0, 1.0), 0.0);
-    renderer.renderSprite(logo, Vec3(0.0, 0.0, -5.0), Vec3(0.5, 0.5), Vec3(40.0, 40.0, 1.0), 0.0);
-    renderer.pushModelViewMatrix();
-    //renderer.mulModelViewMatrix(Matrix::rotateX(SDL_GetTicks() / 1000.0 * M_PI / 8.0));
-    renderer.mulModelViewMatrix(Matrix::rotateX(-M_PI / 2.0) * Matrix::translation(Vec3::Y * -10.0));
-    renderer.renderSprite(logo, Vec3(0.0, 0.0, 0.0), Vec3(0.5, 0.5), Vec3(40.0, 40.0, 1.0), 0.0);
-    renderer.popModelViewMatrix();
-    glEnable(GL_CULL_FACE);
-    
     renderer.pushModelViewMatrix(); {
       quanta_renderer.render(*view_camera, quanta);
       //quanta_renderer.renderVelocities(*view_camera, quanta);

@@ -3,7 +3,7 @@
 #include "renderer/material.h"
 #include "renderer/texture.h"
 #include "renderer/camera.h"
-#include "uniform_matrix_stack.h"
+#include "renderer/uniform_matrix_stack.h"
 #include "renderer/square_mesh.h"
 #end
 
