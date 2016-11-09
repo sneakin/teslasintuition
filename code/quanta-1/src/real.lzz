@@ -48,7 +48,7 @@ typedef double Real;
 
 #define fmodr fmod
 #define acosr acos
-#define floorr floor
+#define floorr ::floor
 #define ceilr ceil
 #define modfr modf
 #define atan2r atan2
@@ -84,10 +84,31 @@ inline void glMaterialrv(GLenum face, GLenum a, const Real v[4])
   glMaterialfv(face, a, fv);
 }
 
-#define glUniform1r glUniform1d
-#define glUniform3rv glUniform3dv
-#define glUniform4rv glUniform4dv
-#define glUniformMatrix4rv glUniformMatrix4dv
+#define glUniform1r glUniform1f
+
+// TODO handle counts
+inline void glUniform3rv(GLint loc, GLsizei count, const Real v[3])
+{
+  float fv[3] = { (float)v[0], (float)v[1], (float)v[2] };
+  glUniform3fv(loc, count, fv);
+}
+
+inline void glUniform4rv(GLint loc, GLsizei count, const Real v[4])
+{
+  float fv[4] = { (float)v[0], (float)v[1], (float)v[2], (float)v[3] };
+  glUniform4fv(loc, count, fv);
+}
+
+inline void glUniformMatrix4rv(GLint loc, GLsizei count, GLboolean transpose, const Real v[16])
+{
+  float fv[16] = {
+    (float)v[0], (float)v[1], (float)v[2], (float)v[3],
+    (float)v[4], (float)v[5], (float)v[6], (float)v[7],
+    (float)v[8], (float)v[9], (float)v[10], (float)v[11],
+    (float)v[12], (float)v[13], (float)v[14], (float)v[15]
+  };
+  glUniformMatrix4fv(loc, count, transpose, fv);
+}
 
 #endif /* CHEAPER_MATH */
 #end

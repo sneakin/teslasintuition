@@ -1,15 +1,18 @@
 #hdr
+#include "real.h"
 #include "colors.h"
 #end
 
 class Material
 {
   Vec3 _diffuse, _specular, _emission, _ambient;
-  int _shininess;
-  
+  Real _shininess;
+
 public:
-  Material(const Vec3 &diffuse, const Vec3 &specular, int shininess, const Vec3 &ambient)
-    : _diffuse(diffuse), _specular(specular), _emission(), _shininess(shininess), _ambient(ambient)
+  static const Material Default;
+  
+  Material(const Vec3 &diffuse = Colors::White, const Vec3 &specular = Colors::White, Real shininess = 48.0, const Vec3 &ambient = Colors::White, const Vec3 &emission = Colors::Black)
+    : _diffuse(diffuse), _specular(specular), _emission(emission), _shininess(shininess), _ambient(ambient)
   {
   }
 

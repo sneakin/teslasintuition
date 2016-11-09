@@ -5,8 +5,21 @@ layout(location = 2) in vec4 inNormal;
 layout(location = 3) in vec4 inTexture;
 
 uniform mat4 mModelView, mProjection, mTexture, mColor;
-uniform vec4 uColor;
-uniform vec4 uLight0Position;
+uniform vec4 uColor = vec4(1.0, 1.0, 1.0, 0.0);
+
+struct Light {
+  vec3 color;
+  vec4 position;
+  vec4 specular;
+  float intensity;
+};
+
+uniform Light uLight = {
+  vec3(1.0, 1.0, 1.0),
+  vec4(0.0, 0.0, 1.0, 0.0),
+  vec4(1.0, 1.0, 1.0, 0.5),
+  1.0
+};
 
 out vec4 Color;
 out vec2 Texture;
@@ -23,7 +36,7 @@ void main()
   vec4 pos = vec4(inPosition.x, inPosition.y, inPosition.z, 1.0);
   Vert = vec3(mModelView * pos);
   Texture = vec2(mTexture * inTexture);
-  Light0Position = vec3(uLight0Position) - Vert;
+  Light0Position = vec3(uLight.position) - Vert;
   Light0Distance = length(Light0Position);
   gl_Position = mProjection * mModelView * pos;
 }

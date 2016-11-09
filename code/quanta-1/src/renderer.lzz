@@ -5,12 +5,14 @@
 #include "renderer/camera.h"
 #include "renderer/uniform_matrix_stack.h"
 #include "renderer/square_mesh.h"
+#include "renderer/line_mesh.h"
 #end
 
 #src
 #include <SDL2/SDL.h>
 #include "gl.h"
 #include "real.h"
+#include "math-fun.h"
 #include <assert.h>
 #end
 
@@ -39,12 +41,17 @@ private:
   SDL_GLContext _gl_context;
   SDL_Window *_window;
   TextureIdMap _texture_handles;
-  GLuint _shader_in_position, _shader_in_color, _shader_in_texture, _shader_uniform_color, _shader_uniform_texture, _shader_in_time, _shader_uniform_light0_position, _shader_uniform_light0_intensity, _shader_uniform_light0_color, _shader_uniform_light0_specular, _shader_uniform_ambient_light, _shader_uniform_forward, _shader_uniform_camera;
+  GLuint _shader_in_position, _shader_in_color, _shader_in_texture, _shader_uniform_color, _shader_uniform_texture, _shader_in_time, _shader_uniform_light0_position, _shader_uniform_light0_intensity, _shader_uniform_light0_color, _shader_uniform_ambient_light, _shader_uniform_forward, _shader_uniform_camera;
+  GLuint _shader_uniform_material_shine, _shader_uniform_material_specular, _shader_uniform_material_diffuse, _shader_uniform_material_ambient, _shader_uniform_material_emission;
   SquareMesh *_quad;
+  LineMesh *_line;
   UniformMatrixStack _modelview, _projection, _texture, _color;
   Vec3 _uniform_color;
+  Material _material;
 
 public:
+  static const Material AxisMaterial = Material(Colors::White, Colors::White, 0.0, Colors::White, Colors::White);
+  
   Renderer(SDL_Window *window)
     : _window(window), _uniform_color(Colors::White)
   {
@@ -54,7 +61,7 @@ public:
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
+    //SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
 
     _gl_context = SDL_GL_CreateContext(_window);
@@ -71,8 +78,10 @@ public:
     ASSERT_GL_ERROR;
 
     _quad = new SquareMesh(*this);
-
+    _line = new LineMesh(*this);
+    
     blankDefaultTexture();
+    bindMaterial(GL_FRONT_AND_BACK, Material::Default);
   }
 
   virtual ~Renderer()
@@ -82,6 +91,7 @@ public:
     }
 
     delete _quad;
+    delete _line;
     
     SDL_GL_DeleteContext(_gl_context);
   }
@@ -112,20 +122,22 @@ public:
   
   void bindMaterial(GLenum face, const Material &m)
   {
-    glMateriali(face, GL_SHININESS, m.shininess());
-    glMaterialrv(face, GL_SPECULAR, m.specular());
-    glMaterialrv(face, GL_EMISSION, m.emission());
-    glMaterialrv(face, GL_AMBIENT, m.ambient());
-    glMaterialrv(face, GL_DIFFUSE, m.diffuse());
+    if(face == GL_FRONT_AND_BACK) {
+      bindMaterial(GL_FRONT, m);
+      bindMaterial(GL_BACK, m);
+    } else {
+      _material = m; // TODO detect if useProgram was called
+      glUniform1r(_shader_uniform_material_shine, m.shininess());
+      glUniform4rv(_shader_uniform_material_specular, 1, m.specular());
+      glUniform4rv(_shader_uniform_material_emission, 1, m.emission());
+      glUniform4rv(_shader_uniform_material_ambient, 1, m.ambient());
+      glUniform4rv(_shader_uniform_material_diffuse, 1, m.diffuse());
+    }
   }
 
   void unbindMaterial(GLenum face)
   {
-    glMateriali(face, GL_SHININESS, 127);
-    glMaterialrv(face, GL_SPECULAR, Colors::White);
-    glMaterialrv(face, GL_EMISSION, Colors::Black);
-    glMaterialrv(face, GL_AMBIENT, Colors::Black);
-    glMaterialrv(face, GL_DIFFUSE, Colors::White);
+    bindMaterial(face, Material::Default);
   }
 
   unsigned int findTextureHandle(const Texture &tex)
@@ -226,6 +238,7 @@ public:
     glUseProgram(prog_id);
     bindUniforms(prog_id);
     setColor(_uniform_color);
+    bindMaterial(GL_FRONT_AND_BACK, _material);
   }
 
   void bindUniforms(GLuint prog_id)
@@ -237,13 +250,18 @@ public:
 
     _shader_uniform_color = glGetUniformLocation(prog_id, "uColor");
     _shader_uniform_texture = glGetUniformLocation(prog_id, "tex");
-    _shader_uniform_light0_position = glGetUniformLocation(prog_id, "uLight0Position");
-    _shader_uniform_light0_intensity = glGetUniformLocation(prog_id, "uLight0Intensity");
-    _shader_uniform_light0_color = glGetUniformLocation(prog_id, "uLight0Color");
-    _shader_uniform_light0_specular = glGetUniformLocation(prog_id, "uLight0Specular");
+    _shader_uniform_light0_position = glGetUniformLocation(prog_id, "uLight.position");
+    _shader_uniform_light0_intensity = glGetUniformLocation(prog_id, "uLight.intensity");
+    _shader_uniform_light0_color = glGetUniformLocation(prog_id, "uLight.color");
     _shader_uniform_ambient_light = glGetUniformLocation(prog_id, "uAmbientLight");
     _shader_uniform_forward = glGetUniformLocation(prog_id, "uForward");
     _shader_uniform_camera = glGetUniformLocation(prog_id, "uCamera");
+
+    _shader_uniform_material_shine = glGetUniformLocation(prog_id, "uMaterial.shine");
+    _shader_uniform_material_specular = glGetUniformLocation(prog_id, "uMaterial.specular");
+    _shader_uniform_material_diffuse = glGetUniformLocation(prog_id, "uMaterial.diffuse");
+    _shader_uniform_material_ambient = glGetUniformLocation(prog_id, "uMaterial.ambient");
+    _shader_uniform_material_emission = glGetUniformLocation(prog_id, "uMaterial.emission");
 
     _modelview.setLocation(glGetUniformLocation(prog_id, "mModelView"));
     _projection.setLocation(glGetUniformLocation(prog_id, "mProjection"));
@@ -358,94 +376,75 @@ public:
 
  void renderCameraAxis(const Camera &camera)
   {
-    glBegin(GL_LINES);
-    glColor3rv(Colors::Red);
-    glVertex3rv(camera.position() + camera.right() * 1024);
-    glVertex3rv(camera.position());
-    glColor3rv(Colors::Green);
-    glVertex3rv(camera.position() + camera.up() * 1024);
-    glVertex3rv(camera.position());
-    glColor3rv(Colors::Blue);
-    glVertex3rv(camera.position() + camera.forward() * 1024);
-    glVertex3rv(camera.position());
-
-
-    glColor3rv(Colors::Yellow);
-    glVertex3rv(camera.position() + Vec3(1, 0, 0) * 1024);
-    glVertex3rv(camera.position());
-    glColor3rv(Colors::Cyan);
-    glVertex3rv(camera.position() + Vec3(0, 1, 0) * 1024);
-    glVertex3rv(camera.position());
-    glColor3rv(Colors::Magenta);
-    glVertex3rv(camera.position() + Vec3(0, 0, 1) * 1024);
-    glVertex3rv(camera.position());
-
-    glEnd();
+    renderAxis(camera.position(), camera.right(), camera.up());
+    pushColorMatrix(); {
+      mulColorMatrix(Matrix::rotate(Vec3(M_PI / 4.0, M_PI / 4.0, M_PI / 4.0)));
+      renderAxis(camera.position(), Vec3::X, Vec3::Y);
+    } popColorMatrix();
   }
 
   void renderOriginAxis()
   {
-    glBegin(GL_LINES);
-    glColor3rv(Colors::Red);
-    glVertex3r(1024, 0, 0);
-    glVertex3r(0, 0, 0);
-    glColor3rv(Colors::Green);
-    glVertex3r(0, 1024, 0);
-    glVertex3r(0, 0, 0);
-    glColor3rv(Colors::Blue);
-    glVertex3r(0, 0, 1024);
-    glVertex3r(0, 0, 0);
-    glEnd();
+    bindMaterial(GL_FRONT_AND_BACK, AxisMaterial);
+    renderVector(Vec3(), Vec3::X, Colors::Red);
+    renderVector(Vec3(), Vec3::Y, Colors::Green);
+    renderVector(Vec3(), Vec3::Z, Colors::Blue);
+    unbindMaterial(GL_FRONT_AND_BACK);
   }
 
   void renderAxis(const Vec3 &origin, const Vec3 &right = Vec3::X, const Vec3 &up = Vec3::Y)
   {
-    glPushMatrix(); {
-      glMultMatrixr(Matrix::translation(origin));
-      glMultMatrixr(Matrix::lookAt(up.cross(right), up));
-      // todo rotate to fit right
-
+    pushModelViewMatrix(); {
+      mulModelViewMatrix(Matrix::lookAt(up.cross(right), up) * Matrix::translation(origin));
       renderOriginAxis();
-
-    } glPopMatrix();
+    } popModelViewMatrix();
   }
 
   void renderVector(const Vec3 &origin, const Vec3 &v, const Vec3 &color = Colors::White)
   {
-    glLineWidth(16.0);
-    glColor3rv(color);
-    glBegin(GL_LINES);
-    glVertex3rv(origin);
-    glVertex3rv(origin + v);
-    glEnd();
+    ASSERT_GL_ERROR;
+    glLineWidth(4.0);
+    glPointSize(10.0);
+    ASSERT_GL_ERROR;
+    setColor(color);
+    pushModelViewMatrix(); {
+      mulModelViewMatrix(Matrix::scale(v * Vec3(1.0, 1.0, 1.0, 0.0) + Vec3::W) * Matrix::translation(origin));
+      _line->bind();
+      glDrawArrays(GL_LINES, 0, 2);
+      _line->unbind();
+    } popModelViewMatrix();
+    ASSERT_GL_ERROR;
   }
 
   void renderNormal(const Vec3 &origin, const Vec3 &normal, const Vec3 &color = Colors::Green)
   {
+    bindMaterial(GL_FRONT_AND_BACK, AxisMaterial);
     renderVector(origin, normal * 512.0, color);
   }
 
   void renderPole(const Camera &cam, const Vec3 &position, Real value, const Vec3 &color)
   {
+    bindMaterial(GL_FRONT_AND_BACK, AxisMaterial);
     renderVector(position, Vec3(0, 1, 0) * value, color);
   }
 
-  void renderPoint(const Vec3 &position, const Vec3 &color = Colors::White)
+  void renderPoint(const Vec3 &position, const Vec3 &color = Colors::White, Real diameter = 1.0)
   {
-    glBegin(GL_POINTS);
-    glColor4rv(color);
-    glVertex3rv(position);
-    glEnd();
+    ASSERT_GL_ERROR;
+    glPointSize(clamp<Real>(diameter, 10.0));
+    setColor(color);
+    pushModelViewMatrix(); {
+      mulModelViewMatrix(Matrix::translation(position));
+      _line->bind();
+      glDrawArrays(GL_POINTS, 0, 1);
+      _line->unbind();
+    } popModelViewMatrix();
+    ASSERT_GL_ERROR;
   }
 
   void renderLine(const Vec3 &a, const Vec3 &b, const Vec3 &color = Colors::White)
   {
-    glLineWidth(4);
-    glBegin(GL_LINES);
-    glColor3rv(color);
-    glVertex3rv(a);
-    glVertex3rv(b);
-    glEnd();
+    renderVector(a, b - a, color);
   }
 
   void setViewport(int top, int left, int width, int height)
@@ -453,33 +452,24 @@ public:
     glViewport(top, left, width, height);
   }
   
-  uint32_t createPointLight(const Vec3 &position, Real attenuation, const Vec3 &color, const Vec3 &specular)
+  uint32_t createPointLight(const Vec3 &position, Real attenuation, const Vec3 &color)
   {
     moveLight(0, position);
     glUniform1r(_shader_uniform_light0_intensity, attenuation);
     ASSERT_GL_ERROR;
     glUniform3rv(_shader_uniform_light0_color, 1, color);
     ASSERT_GL_ERROR;
-    glUniform4rv(_shader_uniform_light0_specular, 1, specular);
-    ASSERT_GL_ERROR;
     return 0;
-    // glLightr(GL_LIGHT0, GL_CONSTANT_ATTENUATION, attenuation);
-    // glLightrv(GL_LIGHT0, GL_DIFFUSE, color);
-    // glLightrv(GL_LIGHT0, GL_SPECULAR, specular);
-
-    // glEnable(GL_LIGHT0);
   }
 
   void setAmbientLight(const Vec3 &color)
   {
     glUniform3rv(_shader_uniform_ambient_light, 1, color);
-    //glLightrv(GL_LIGHT0, GL_AMBIENT, color);
   }
 
   void moveLight(uint32_t id, const Vec3 &position)
   {
     glUniform4rv(_shader_uniform_light0_position, 1, _modelview.top() * position);
     ASSERT_GL_ERROR;
-    //glLightrv(GL_LIGHT0, GL_POSITION, position);
   }    
 };

@@ -16,6 +16,8 @@ public:
   IcosahedronRenderer _icosa_ren;
   Renderer &_renderer;
 
+  static const Material QuantaMaterial = Material(Colors::White * 0.6, Colors::White, 32.0, Colors::White * 0.8);
+
   QuantaRenderer(Renderer &renderer)
     : _icosa(1.0), _icosa_ren(_icosa, renderer), _renderer(renderer)
   {
@@ -24,6 +26,7 @@ public:
   void render(const Camera &camera, const Quanta &quanta)
   {
     _renderer.unbindTexture();
+    _renderer.bindMaterial(GL_FRONT_AND_BACK, QuantaMaterial);
     
     for(int i = 0; i < quanta.size(); i++) {
       Quantum q = quanta[i];
@@ -39,7 +42,8 @@ public:
   {
     for(int i = 0; i < quanta.size(); i++) {
       Quantum q = quanta[i];
-      _renderer.renderVector(q.position(), q.velocity() * _icosa.radius(), q.color());
+      _renderer.bindMaterial(GL_FRONT_AND_BACK, Renderer::AxisMaterial);
+      _renderer.renderVector(q.position(), q.velocity() * _icosa.radius() * 10.0, q.color());
     }
   }
 };

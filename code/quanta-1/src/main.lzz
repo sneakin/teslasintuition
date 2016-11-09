@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 {
   unsigned int frames = 0, ms_per_frame = 0, frame_start = 0;
   int joystick_index = 0;
-  Real near_plane = 4.0, far_plane = 1024.0 * 8.0;
+  Real new_offset = 2.0, near_plane = 1.0, far_plane = 1024.0 * 4.0;
   int num_quanta = 125, universe_size = 2048, generation = 0;
   Real quantum_speed = 0.0, quantum_forward_speed = 0.0, quantum_radius = 0.5f, quantum_mass = 1.0;
   Real mp = quantum_radius * 2.5f;
@@ -237,9 +237,9 @@ int main(int argc, char *argv[])
   done = false;
   shaders.bind();
   
-  Vec3 light_color(Colors::White), spec_color(1.0, 1.0, 1.0, 48.0);
-  uint32_t light_id = renderer.createPointLight(Vec3(0.0, 50.0, 0.0, 1.0), universe_size, light_color, spec_color);
-  renderer.setAmbientLight(light_color * 0.1);
+  Vec3 light_color(Colors::White), ambient_color(light_color * 0.1);
+  uint32_t light_id = renderer.createPointLight(Vec3(0.0, 0.0, 0.0, 1.0), universe_size / 2.0, light_color);
+  renderer.setAmbientLight(ambient_color);
 
   while(!done) {
     frame_start = SDL_GetTicks();
@@ -377,7 +377,7 @@ int main(int argc, char *argv[])
           break;
         case SDL_SCANCODE_RETURN:
           if(event.type == SDL_KEYDOWN) {
-            quanta.push_back(new Quantum(camera->forward() * near_plane * 1.5f + camera->position(), camera->forward() * quantum_speed, universe_size, Colors::color(), quantum_mass));
+            quanta.push_back(new Quantum(camera->forward() * new_offset * 1.5f + camera->position(), camera->forward() * quantum_speed, universe_size, Colors::color(), quantum_mass));
           }
           break;
         case SDL_SCANCODE_EQUALS:
@@ -432,7 +432,7 @@ int main(int argc, char *argv[])
           if(event.type == SDL_KEYDOWN) {
             Vec3 color = Colors::color(generation++);
             for(int i = 0; i < num_quanta; i++) {
-              quanta.push_back(new Quantum(camera->forward() * near_plane * 1.5f + camera->position() + Vec3::random(min_position, max_position),
+              quanta.push_back(new Quantum(camera->forward() * new_offset * 1.5f + camera->position() + Vec3::random(min_position, max_position),
                                        quantum_forward_speed * camera->forward() + quantum_speed * Vec3::random(),
                                        universe_size,
                                        color,
@@ -448,7 +448,7 @@ int main(int argc, char *argv[])
             for(int x = 0; x < maxq; x++) {
               for(int y = 0; y < maxq; y++) {
                 for(int z = 0; z < maxq; z++) {
-                  quanta.push_back(new Quantum(camera->forward() * near_plane * 1.5f + camera->position() + (Vec3(x, y, z) / maxq * d - d / 2),
+                  quanta.push_back(new Quantum(camera->forward() * new_offset * 1.5f + camera->position() + (Vec3(x, y, z) / maxq * d - d / 2),
                                                quantum_forward_speed * camera->forward() + quantum_speed * Vec3::random(),
                                                universe_size,
                                                color,
@@ -487,7 +487,7 @@ int main(int argc, char *argv[])
         switch(event.button.button) {
           case SDL_BUTTON_LEFT:
             if(event.button.clicks == 1) {
-              quanta.push_back(new Quantum(camera->forward() * near_plane * 1.5f + camera->position(), camera->forward() * quantum_speed, universe_size, Colors::color(), quantum_mass));
+              quanta.push_back(new Quantum(camera->forward() * new_offset * 1.5f + camera->position(), camera->forward() * quantum_speed, universe_size, Colors::color(), quantum_mass));
             }
             break;
           case SDL_BUTTON_RIGHT:
@@ -653,7 +653,22 @@ int main(int argc, char *argv[])
     //Vec3 light_pos(Matrix::rotateZ(SDL_GetTicks() * M_PI / 1000.0 / 8.0) * Matrix::rotateY(SDL_GetTicks() * M_PI / 1000.0 / 4.0) * Vec3(16.0, 0.0, 0.0));
     Vec3 light_pos(Vec3(0.0, 0.0, 0.0));
     renderer.moveLight(light_id, light_pos);
+    renderer.bindMaterial(GL_FRONT_AND_BACK, Renderer::AxisMaterial);
+    renderer.renderPoint(light_pos, light_color, 10.0);
 
+#if 0
+    renderer.renderOriginAxis();
+    renderer.bindMaterial(GL_FRONT_AND_BACK, Renderer::AxisMaterial);
+    
+    for(int i = 0; i < 32; i++) {
+      float t = SDL_GetTicks() / 1000.0 * 2.0 * M_PI;
+      float a = i * 2.0 * M_PI / 32.0;
+      Vec3 angles = Vec3(a + t, a + t, a + t);
+      renderer.renderVector(Vec3(), (Matrix::rotate(angles) * Vec3::X).normalize() * 10.0, Colors::Cyan);
+      renderer.renderVector(Vec3(), (Matrix::rotate(angles * Vec3(1.0, 0.0, 1.0, 1.0)) * Vec3::X).normalize() * 10.0, Colors::Magenta);
+    }
+#endif
+    
     renderer.pushModelViewMatrix(); {
       quanta_renderer.render(*view_camera, quanta);
       //quanta_renderer.renderVelocities(*view_camera, quanta);

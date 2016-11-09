@@ -96,7 +96,7 @@ public:
 
   Vec3 forward() const {
     // todo figure why this needs to be negated
-    return -Vec3(_matrix.get(2, 0), _matrix.get(2, 1), _matrix.get(2, 2));
+    return -Vec3(_matrix.get(2, 0), _matrix.get(2, 1), _matrix.get(2, 2), -1.0);
   }
 
   Vec3 right() const

@@ -2,9 +2,36 @@
 uniform sampler2D tex;
 uniform mat4 mModelView, mColor;
 uniform vec3 uForward, uCamera;
-uniform vec3 uLight0Color, uAmbientLight;
-uniform vec4 uLight0Position, uLight0Specular;
-uniform float uLight0Intensity;
+
+struct Light {
+  vec3 color;
+  vec4 position;
+  vec4 specular;
+  float intensity;
+};
+
+uniform Light uLight = {
+  vec3(1.0, 1.0, 1.0),
+  vec4(0.0, 0.0, 1.0, 0.0),
+  vec4(1.0, 1.0, 1.0, 0.5),
+  1.0
+};
+uniform vec3 uAmbientLight = vec3(0.1, 0.1, 0.1);
+
+struct Material {
+  float shine;
+  vec4 specular;
+  vec4 emission;
+  vec4 diffuse;
+  vec4 ambient;
+};
+uniform Material uMaterial = {
+  48.0,
+  vec4(1.0, 1.0, 1.0, 1.0),
+  vec4(1.0, 1.0, 1.0, 1.0),
+  vec4(1.0, 1.0, 1.0, 1.0),
+  vec4(1.0, 1.0, 1.0, 1.0)
+};
 
 smooth in vec4 Color;
 smooth in vec2 Texture;
@@ -22,17 +49,21 @@ void main()
     normal = -normal;
   }
   vec3 light_dir = normalize(Light0Position);
-  float d = Light0Distance * Light0Distance;
+  float d = Light0Distance;
+  float falloff = uLight.intensity / d;
   float brightness = max(dot(light_dir, normal), 0.0);
-  vec3 diffuse = brightness * uLight0Intensity * vec3(uLight0Color) / d;
+  vec3 diffuse = vec3(uMaterial.diffuse) * brightness * vec3(uLight.color) * falloff;
 
   vec3 surf_to_cam = -normalize(Vert);
   vec3 r = reflect(-light_dir, normal);
   float spec_angle = max(dot(r, surf_to_cam), 0.0);
-  vec3 specular = uLight0Intensity * pow(spec_angle, uLight0Specular.a) * vec3(uLight0Specular) / d;
+  vec3 specular = vec3(uMaterial.specular) * vec3(uLight.color) * pow(spec_angle, uMaterial.shine) * falloff;
 
+  vec3 ambient = vec3(uMaterial.ambient) * uAmbientLight;
+  
   vec4 tex_color = texture(tex, Texture);
   vec3 surf_color = mix(vec3(tex_color), vec3(Color), Color.a);
-  vec3 c = (uAmbientLight + diffuse + specular) * vec3(surf_color);
+  vec3 emission = vec3(uMaterial.emission) * surf_color;
+  vec3 c = clamp(ambient + diffuse + specular, 0.0, 1.0) * vec3(surf_color) + emission;
   outColor = vec4(c.r, c.g, c.b, tex_color.a);
 }
