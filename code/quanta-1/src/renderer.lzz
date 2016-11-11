@@ -112,6 +112,26 @@ public:
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
   }
 
+  void setDepthTest(GLenum f)
+  {
+    if(f != GL_FALSE) {
+      glEnable(GL_DEPTH_TEST);
+      glDepthFunc(GL_LEQUAL);
+    } else {
+      glDisable(GL_DEPTH_TEST);
+    }
+  }
+
+  void setCullFace(GLenum face)
+  {
+    if(face != GL_FALSE) {
+      glEnable(GL_CULL_FACE);
+      glCullFace(face);
+    } else {
+      glDisable(GL_CULL_FACE);
+    }
+  }
+
   void blankDefaultTexture()
   {
     unbindTexture();

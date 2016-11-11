@@ -211,20 +211,9 @@ int main(int argc, char *argv[])
   renderer.setColorMatrix(Matrix::identity());
   renderer.setModelViewMatrix(Matrix::identity());
 
-  glEnable(GL_DEPTH_TEST);
-  glDepthFunc(GL_LEQUAL);
+  renderer.setDepthTest(GL_LEQUAL);
+  renderer.setCullFace(GL_BACK);
 
-  glEnable(GL_CULL_FACE);
-  glCullFace(GL_BACK);
-
-  /*
-  glEnable(GL_FOG);
-  glFogrv(GL_FOG_COLOR, Colors::Black);
-  glFogi(GL_FOG_MODE, GL_LINEAR);
-  glFogi(GL_FOG_START, near_plane);
-  glFogi(GL_FOG_END, far_plane / 2.0);
-  */
-  
   Real speed = 16.0;
   Real droll = 0.0, dpitch = 0.0, dyaw = 0.0;
 
@@ -238,7 +227,7 @@ int main(int argc, char *argv[])
   shaders.bind();
   
   Vec3 light_color(Colors::White), ambient_color(light_color * 0.1);
-  uint32_t light_id = renderer.createPointLight(Vec3(0.0, 0.0, 0.0, 1.0), universe_size / 2.0, light_color);
+  uint32_t light_id = renderer.createPointLight(Vec3(0.0, 0.0, 0.0, 1.0), universe_size / 8.0, light_color);
   renderer.setAmbientLight(ambient_color);
 
   while(!done) {

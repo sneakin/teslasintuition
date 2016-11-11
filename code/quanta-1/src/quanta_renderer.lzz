@@ -16,7 +16,7 @@ public:
   IcosahedronRenderer _icosa_ren;
   Renderer &_renderer;
 
-  static const Material QuantaMaterial = Material(Colors::White * 0.6, Colors::White, 32.0, Colors::White * 0.8);
+  static const Material QuantaMaterial = Material(Colors::White * 0.8, Colors::White * 0.8, 32.0, Colors::White * 0.8);
 
   QuantaRenderer(Renderer &renderer)
     : _icosa(1.0), _icosa_ren(_icosa, renderer), _renderer(renderer)

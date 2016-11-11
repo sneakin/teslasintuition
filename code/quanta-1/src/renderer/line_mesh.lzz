@@ -27,7 +27,7 @@ public:
     _verts.update(verts, 2);
     _varray.enableAttribute(0, 4, GL_REAL, GL_FALSE, 0, 0);
     _varray.enableAttribute(3, 4, GL_REAL, GL_FALSE, 0, 0);
-    Vec3 colors[2] = { Colors::Clear, Colors::Clear };
+    Vec3 colors[2] = { Colors::White, Colors::White };
     _colors.update(verts, 2);
     _varray.enableAttribute(1, 4, GL_REAL, GL_FALSE, 0, 0);
     Vec3 normals[2] = { Vec3::Z, Vec3::Z };

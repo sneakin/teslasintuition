@@ -57,13 +57,16 @@ void main()
   vec3 surf_to_cam = -normalize(Vert);
   vec3 r = reflect(-light_dir, normal);
   float spec_angle = max(dot(r, surf_to_cam), 0.0);
-  vec3 specular = vec3(uMaterial.specular) * vec3(uLight.color) * pow(spec_angle, uMaterial.shine) * falloff;
+  vec3 base_spec = uMaterial.specular.a * vec3(uMaterial.specular) * vec3(uLight.color) * falloff;
+  vec3 specular = base_spec * pow(spec_angle, 0.321 * uMaterial.shine);
+  vec3 super_specular = base_spec * pow(spec_angle, 0.321 * uMaterial.shine * 1.5);
 
   vec3 ambient = vec3(uMaterial.ambient) * uAmbientLight;
   
   vec4 tex_color = texture(tex, Texture);
   vec3 surf_color = mix(vec3(tex_color), vec3(Color), Color.a);
   vec3 emission = vec3(uMaterial.emission) * surf_color;
-  vec3 c = clamp(ambient + diffuse + specular, 0.0, 1.0) * vec3(surf_color) + emission;
+  vec3 c = clamp(ambient + diffuse + specular, 0.0, 1.0) * vec3(surf_color) + super_specular;
+  c = max(c, emission);
   outColor = vec4(c.r, c.g, c.b, tex_color.a);
 }
