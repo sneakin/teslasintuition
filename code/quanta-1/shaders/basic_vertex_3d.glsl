@@ -6,6 +6,7 @@ layout(location = 3) in vec4 inTexture;
 
 uniform mat4 mModelView, mProjection, mTexture, mColor;
 uniform vec4 uColor = vec4(1.0, 1.0, 1.0, 0.0);
+uniform vec3 uVelocity = vec3(0.0, 0.0, 0.0);
 
 struct Light {
   vec3 color;
@@ -25,18 +26,27 @@ out vec4 Color;
 out vec2 Texture;
 out vec3 Normal;
 out vec3 Vert;
+out vec4 Vert_screen;
+out vec3 Vert_Lastframe;
+out vec4 Vert_screen_lastframe;
+out vec3 Velocity;
 out float Light0Distance;
 out vec3 Light0Position;
 
 void main()
 {
-  Color = mColor * uColor; //mix(inColor, uColor, uColor.a);
+  Color = uColor; //mix(inColor, uColor, uColor.a);
+  //Color = mColor * mix(inColor, uColor, uColor.a);
   //Normal = mat3(mModelView) * normalize(vec3(inNormal));
   Normal = normalize(mat3(mModelView) * vec3(inNormal));
   vec4 pos = vec4(inPosition.x, inPosition.y, inPosition.z, 1.0);
   Vert = vec3(mModelView * pos);
+  Vert_Lastframe = vec3(mModelView * pos - vec4(uVelocity, 0.0));
+  Vert_screen = mProjection * vec4(Vert, 1.0);
+  Vert_screen_lastframe = mProjection * vec4(Vert_Lastframe, 1.0);
   Texture = vec2(mTexture * inTexture);
-  Light0Position = vec3(uLight.position) - Vert;
+  Light0Position = vec3(uLight.position) - vec3(Vert.x, Vert.y, Vert.z);
   Light0Distance = length(Light0Position);
-  gl_Position = mProjection * mModelView * pos;
+  Velocity = uVelocity;
+  gl_Position = Vert_screen;
 }

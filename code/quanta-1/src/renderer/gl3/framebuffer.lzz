@@ -1,0 +1,87 @@
+#hdr
+#include "gl.h"
+#include "vec3.h"
+#include "real.h"
+#include "renderer/texture.h"
+#include "renderer/gl3/renderbuffer.h"
+#end
+
+namespace GL3
+{
+  class Framebuffer
+  {
+    GLuint _id;
+    GLenum _mode;
+    
+  public:
+    Framebuffer()
+      : _mode(GL_FRAMEBUFFER)
+    {
+      glGenFramebuffers(1, &_id);
+      ASSERT_GL_ERROR;
+    }
+
+    Framebuffer(GLint id)
+      : _mode(GL_FRAMEBUFFER)
+    {
+      _id = id;
+    }    
+    
+    ~Framebuffer()
+    {
+      if(_id != 0) {
+        glDeleteFramebuffers(1, &_id);
+        ASSERT_GL_ERROR;
+      }
+    }
+
+    GLuint id() const { return _id; }
+
+    void bind(GLenum mode = GL_FRAMEBUFFER)
+    {
+      _mode = mode;
+      glBindFramebuffer(_mode, _id);
+      ASSERT_GL_ERROR;
+    }
+
+    void unbind()
+    {
+      glBindFramebuffer(_mode, 0);
+      ASSERT_GL_ERROR;
+    }
+
+    void attachTexture(GLenum target, const Texture &tex)
+    {
+      bind();
+      glFramebufferTexture2D(_mode, target, GL_TEXTURE_2D, tex.id(), 0);
+      ASSERT_GL_ERROR;
+    }
+
+    void drawTo(GLsizei n, GLenum buffers[])
+    {
+      bind();
+      glDrawBuffers(n, buffers);
+      ASSERT_GL_ERROR;
+    }
+
+    void clear(GLuint n, const Vec3 &color)
+    {
+      bind();
+      glClearBufferrv(GL_COLOR, n, color);
+      ASSERT_GL_ERROR;
+    }
+
+    void attachRenderbuffer(GLenum target, const GL3::Renderbuffer &rb)
+    {
+      bind();
+      glFramebufferRenderbuffer(_mode, target, GL_RENDERBUFFER, rb.id());
+      ASSERT_GL_ERROR;
+    }
+
+    bool isComplete()
+    {
+      bind();
+      return glCheckFramebufferStatus(_mode) == GL_FRAMEBUFFER_COMPLETE;
+    }
+  };
+}

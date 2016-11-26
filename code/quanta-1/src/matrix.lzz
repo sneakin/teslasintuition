@@ -363,12 +363,17 @@ public:
     return Matrix(1, 0, 0, v.x(),
                   0, 1, 0, v.y(),
                   0, 0, 1, v.z(),
-                  0, 0, 0, 1); 
+                  0, 0, 0, 1.0); 
   }
 
   static Matrix translation(Real x, Real y, Real z)
   {
     return translation(Vec3(x, y, z));
+  }
+
+  static Matrix translation(Real n)
+  {
+    return translation(n, n, n);
   }
 
   static Matrix orient(const Vec3 &r, const Vec3 &u, const Vec3 &f, const Vec3 &o = Vec3::Origin)
@@ -399,7 +404,7 @@ public:
   
   static Matrix scale(const Real x, const Real y, const Real z)
   {
-    return scale(Vec3(x, y, z));
+    return scale(Vec3(x, y, z, 1.0));
   }
   
   static Matrix scale(const Vec3 &v)
@@ -470,6 +475,17 @@ public:
       throw IndexOutOfBoundsError(this, y, 4);
 
     _values[x*4+y] = v;
+  }
+
+  Matrix &orientation() const
+  {
+    Matrix m(*this);
+    for(int i = 0; i < 3; i++) {
+      m.set(i, 3, 0.0);
+      m.set(3, i, 0.0);
+    }
+    m.set(3, 3, 1.0);
+    return m;
   }
 
   const Real *get() const {

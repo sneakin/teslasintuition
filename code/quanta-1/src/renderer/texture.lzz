@@ -1,59 +1,177 @@
 #hdr
 #include <string>
+#include <assert.h>
+#include "gl.h"
 #include <SDL2/SDL.h>
+#include "argument_error.h"
+#include "image.h"
 #end
 
 #src
 #include <iostream>
+#include "vec3.h"
+#include "colors.h"
 #end
 
 class Texture
 {
-  std::string _path;
-  bool _repeat_x, _repeat_y;
-  SDL_Surface *_surface;
+  GLuint _id;
 
 public:
   Texture(const std::string &path, bool repeat_x = true, bool repeat_y = true)
-    : _path(path), _repeat_x(repeat_x), _repeat_y(repeat_y), _surface(NULL)
   {
+    generate();
+    if(!load(path)) {
+      throw ArgumentError(path + " was not found");
+    }
+    setRepeat(repeat_x, repeat_y);
   }
+
+  Texture(const Image &image, bool repeat_x = true, bool repeat_y = true)
+  {
+    generate();
+    if(!load(image)) {
+      throw ArgumentError("Failed to load image " + image.path());
+    }
+    setRepeat(repeat_x, repeat_y);
+  }
+
+  Texture(int width, int height, GLenum int_fmt = GL_RGBA, bool repeat_x = true, bool repeat_y = true, GLenum format = GL_RGBA, GLenum type = GL_UNSIGNED_BYTE, int border = 0)
+  {
+    generate();
+    allocateEmpty(width, height, int_fmt, format, type, border);
+    setRepeat(repeat_x, repeat_y);
+  }
+
+  Texture()
+    : _id(0)
+  {
+    // todo sync surface
+    Vec3 p[4] = { Colors::White, Colors::White, Colors::White, Colors::White };
+    update(0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_REAL, p);
+    setRepeat(true, true);
+  }
+
+  void generate()
+  {
+    glGenTextures(1, &_id);
+    ASSERT_GL_ERROR;
+  }    
 
   virtual ~Texture()
   {
-    unload();
-  }
-
-  const std::string &path() const { return _path; }
-
-  bool loaded() const { return _surface != NULL; }
-
-  void unload()
-  {
-    if(_surface) {
-      SDL_FreeSurface(_surface);
-      _surface = NULL;
+    if(_id != 0) {
+      glDeleteTextures(1, &_id);
     }
   }
 
-  bool load()
+  GLuint id() const { return _id; }
+
+  void bind(GLenum tex_unit = 0) const
   {
-    SDL_Surface *bmp = SDL_LoadBMP(_path.c_str());
-    if(bmp != NULL) {
-      unload();
-      _surface = bmp;
-      return true;
-    } else {
-      std::cerr << "Error loading " << _path << ": " << SDL_GetError() << std::endl;
+    glActiveTexture(GL_TEXTURE0 + tex_unit);
+    glBindTexture(GL_TEXTURE_2D, _id);
+    ASSERT_GL_ERROR;
+  }
+
+  void unbind(GLenum tex_unit = 0) const
+  {
+    glActiveTexture(GL_TEXTURE0 + tex_unit);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    ASSERT_GL_ERROR;
+  }
+
+  void setRepeat(bool x, bool y)
+  {
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, x ? GL_REPEAT : GL_CLAMP_TO_BORDER);
+    ASSERT_GL_ERROR;
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, y ? GL_REPEAT : GL_CLAMP_TO_BORDER);
+    ASSERT_GL_ERROR;
+  }
+
+  bool load(const std::string &path)
+  {
+    Image img(path);
+    return load(img);
+  }
+
+  bool load(const Image &image, GLuint tex_unit = 0, int num_mipmaps = 4)
+  {
+    GLuint tex_id;
+    GLenum mode = GL_RGBA;
+
+    assert(tex_unit < GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS);
+
+    if(!image.loaded()) {
       return false;
     }
+
+    int bpp;
+    Uint32 rmask, gmask, bmask, amask;
+    SDL_PixelFormatEnumToMasks(SDL_PIXELFORMAT_ABGR8888, &bpp, &rmask, &gmask, &bmask, &amask);
+    SDL_Surface *surf = SDL_CreateRGBSurface(0, image.width(), image.height(), bpp, rmask, gmask, bmask, amask);
+    if(surf == NULL) {
+      return false;
+    }
+
+    SDL_SetSurfaceAlphaMod(surf, 0xFF);
+    SDL_SetSurfaceBlendMode(surf, SDL_BLENDMODE_NONE);
+    SDL_BlitSurface(image.surface(), NULL, surf, NULL);
+
+    switch(surf->format->BytesPerPixel) {
+      case 3:
+        mode = GL_RGB;
+        break;
+      case 4:
+        mode = GL_RGBA;
+        break;
+      default:
+        std::cerr << "Unknown mode in " << image.path() << "\t" << (int)surf->format->BytesPerPixel << std::endl;
+        return false;
+    }
+
+    //glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    //glPixelStorei(GL_UNPACK_ROW_LENGTH, surf->w);
+    //ASSERT_GL_ERROR;
+    bind(tex_unit);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+    ASSERT_GL_ERROR;
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
+    ASSERT_GL_ERROR;
+    glTexImage2D(GL_TEXTURE_2D, 0, mode, surf->w, surf->h, 0, mode, GL_UNSIGNED_BYTE, surf->pixels);
+    ASSERT_GL_ERROR;
+    glGenerateMipmap(GL_TEXTURE_2D);
+    ASSERT_GL_ERROR;
+
+    unbind();
+
+    SDL_FreeSurface(surf);
+
+    return true;
   }
 
-  SDL_Surface *surface() const { return _surface; }
+  void update(GLuint level, GLenum int_fmt, GLuint w, GLuint h, GLuint border, GLenum format, GLenum type, const GLvoid *data)
+  {
+    bind();
+    glTexImage2D(GL_TEXTURE_2D, level, int_fmt, w, h, border, format, type, data);
+    ASSERT_GL_ERROR;
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+    ASSERT_GL_ERROR;
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+    ASSERT_GL_ERROR;
+    unbind();
+  }
 
-  bool repeatsX() const { return _repeat_x; }
-  bool repeatsY() const { return _repeat_y; }
-
-  int width() const { return _surface->w; }
-  int height() const { return _surface->h; }
+  void allocateEmpty(GLuint width, GLuint height, GLenum int_fmt, GLenum format, GLenum type, GLuint border = 0)
+  {
+    bind();
+    glTexImage2D(GL_TEXTURE_2D, 0, int_fmt, width, height, border, format, type, 0);
+    ASSERT_GL_ERROR;
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+    ASSERT_GL_ERROR;
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+    ASSERT_GL_ERROR;
+    unbind();
+  }
 };

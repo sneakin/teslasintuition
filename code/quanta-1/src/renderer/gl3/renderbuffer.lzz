@@ -1,0 +1,54 @@
+#hdr
+#include "gl.h"
+#end
+
+namespace GL3
+{
+  class Renderbuffer
+  {
+    GLenum _format;
+    GLuint _id;
+    int _width, _height;
+  
+  public:
+    Renderbuffer(GLenum format, int width, int height)
+      : _format(format), _width(width), _height(height)
+    {
+      glGenRenderbuffers(1, &_id);
+      ASSERT_GL_ERROR;
+    }
+
+    ~Renderbuffer()
+    {
+      glDeleteRenderbuffers(1, &_id);
+    }
+
+    GLuint id() const { return _id; }
+  
+    void bind()
+    {
+      glBindRenderbuffer(GL_RENDERBUFFER, _id);
+      ASSERT_GL_ERROR;
+    }
+
+    void unbind()
+    {
+      glBindRenderbuffer(GL_RENDERBUFFER, 0);
+      ASSERT_GL_ERROR;
+    }
+
+    void allocate()
+    {
+      bind();
+      glRenderbufferStorage(GL_RENDERBUFFER, _format, _width, _height);
+      ASSERT_GL_ERROR;
+    }
+
+    void resize(GLuint w, GLuint h)
+    {
+      _width = w;
+      _height = h;
+      allocate();
+    }
+  };
+}

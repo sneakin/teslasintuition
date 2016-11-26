@@ -1,5 +1,13 @@
+#hdr
+#include <string>
+#end
+
 class ArgumentError
 {
+  const std::string &_msg;
+  
 public:
-  ArgumentError() { }
+  ArgumentError(const std::string &msg) : _msg(msg) { }
+
+  const std::string &msg() const { return _msg; }
 };

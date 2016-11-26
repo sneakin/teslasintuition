@@ -20,8 +20,8 @@ public:
     : _quad_verts(renderer), _quad_tex(renderer), _quad_color(renderer), _quad_normals(renderer), _quad(renderer)
   {
     Vec3 verts[4] = {
-      Vec3(0.0, 1.0, 0.0), Vec3(0.0, 0.0, 0.0),
-      Vec3(1.0, 1.0, 0.0), Vec3(1.0, 0.0, 0.0)
+      Vec3(0.0, 1.0, 0.0), Vec3(1.0, 1.0, 0.0),
+      Vec3(0.0, 0.0, 0.0), Vec3(1.0, 0.0, 0.0)
     };
     _quad_verts.update(verts, 4);
 
@@ -38,8 +38,8 @@ public:
     _quad_normals.update(normals, 4);
 
     Vec3 tex[4] = {
-      Vec3(0.0, 0.0, 0.0), Vec3(0.0, 1.0, 0.0),
-      Vec3(1.0, 0.0, 0.0), Vec3(1.0, 1.0, 0.0)
+      Vec3(0.0, 0.0, 0.0), Vec3(1.0, 0.0, 0.0),
+      Vec3(0.0, 1.0, 0.0), Vec3(1.0, 1.0, 0.0)
     };
     _quad_tex.update(tex, 4);
 

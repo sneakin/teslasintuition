@@ -63,4 +63,11 @@ public:
   {
     glBindFragDataLocation(_id, location, name);
   }
+
+  void setUniform(const char *uniform, GLuint value)
+  {
+    GLuint location = glGetUniformLocation(_id, uniform);
+    glUniform1i(location, value);
+  }
+  
 };

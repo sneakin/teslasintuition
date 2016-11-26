@@ -6,6 +6,7 @@
 #include "renderer/uniform_matrix_stack.h"
 #include "renderer/square_mesh.h"
 #include "renderer/line_mesh.h"
+#include "renderer/gl3/framebuffer.h"
 #end
 
 #src
@@ -36,24 +37,29 @@ public:
 class Renderer
 {
 public:
-  typedef std::map<const Texture *, GLuint> TextureIdMap;
+
 private:
   SDL_GLContext _gl_context;
   SDL_Window *_window;
-  TextureIdMap _texture_handles;
-  GLuint _shader_in_position, _shader_in_color, _shader_in_texture, _shader_uniform_color, _shader_uniform_texture, _shader_in_time, _shader_uniform_light0_position, _shader_uniform_light0_intensity, _shader_uniform_light0_color, _shader_uniform_ambient_light, _shader_uniform_forward, _shader_uniform_camera;
+  GLuint _shader_in_position, _shader_in_color, _shader_in_texture, _shader_uniform_color, _shader_uniform_texture, _shader_in_time, _shader_uniform_light0_position, _shader_uniform_light0_intensity, _shader_uniform_light0_color, _shader_uniform_ambient_light, _shader_uniform_forward, _shader_uniform_camera, _shader_uniform_velocity;
   GLuint _shader_uniform_material_shine, _shader_uniform_material_specular, _shader_uniform_material_diffuse, _shader_uniform_material_ambient, _shader_uniform_material_emission;
+  GLuint _shader_uniform_fps, _shader_uniform_target_fps, _shader_uniform_fragment;
   SquareMesh *_quad;
   LineMesh *_line;
   UniformMatrixStack _modelview, _projection, _texture, _color;
   Vec3 _uniform_color;
   Material _material;
+  Texture *_default_texture;
+  GLuint _fragment;
+  Real _last_frame_time, _target_fps;
 
+  static GL3::Framebuffer DefaultFramebuffer = GL3::Framebuffer(0);
+  
 public:
-  static const Material AxisMaterial = Material(Colors::White, Colors::White, 0.0, Colors::White, Colors::White);
+  static const Material AxisMaterial = Material(Colors::Clear, Colors::Clear, 0.0, Colors::White, Colors::White);
   
   Renderer(SDL_Window *window)
-    : _window(window), _uniform_color(Colors::White)
+    : _window(window), _uniform_color(Colors::White), _target_fps(60.0)
   {
     //SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
@@ -79,19 +85,19 @@ public:
 
     _quad = new SquareMesh(*this);
     _line = new LineMesh(*this);
+    _default_texture = new Texture();
     
-    blankDefaultTexture();
     bindMaterial(GL_FRONT_AND_BACK, Material::Default);
+    resetFragmentId();
+    _last_frame_time = currentTime();
+    updateFPS();
   }
 
   virtual ~Renderer()
   {
-    for(TextureIdMap::iterator it = _texture_handles.begin(); it != _texture_handles.end(); it++) {
-      glDeleteTextures(1, &it->second);
-    }
-
     delete _quad;
     delete _line;
+    delete _default_texture;
     
     SDL_GL_DeleteContext(_gl_context);
   }
@@ -100,6 +106,8 @@ public:
   {
     SDL_GL_SwapWindow(_window);
     ASSERT_GL_ERROR;
+    resetFragmentId();
+    updateFPS();
   }
 
   void setClearColor(const Vec3 &c)
@@ -109,7 +117,7 @@ public:
 
   void clear()
   {
-    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
   }
 
   void setDepthTest(GLenum f)
@@ -132,14 +140,6 @@ public:
     }
   }
 
-  void blankDefaultTexture()
-  {
-    unbindTexture();
-    Vec3 p[4] = { Colors::White, Colors::White, Colors::White, Colors::White };
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_REAL, p);
-    ASSERT_GL_ERROR;
-  }
-  
   void bindMaterial(GLenum face, const Material &m)
   {
     if(face == GL_FRONT_AND_BACK) {
@@ -160,97 +160,9 @@ public:
     bindMaterial(face, Material::Default);
   }
 
-  unsigned int findTextureHandle(const Texture &tex)
-  {
-    return _texture_handles[&tex];
-  }
-
-  void bindTexture(const Texture &tex)
-  {
-    glActiveTexture(GL_TEXTURE0);
-    glUniform1i(_shader_uniform_texture, 0);
-    glBindTexture(GL_TEXTURE_2D, findTextureHandle(tex));
-    ASSERT_GL_ERROR;
-  }
-
   void unbindTexture()
   {
-    glBindTexture(GL_TEXTURE_2D, 0);
-    ASSERT_GL_ERROR;
-  }
-
-  bool loadTexture(Texture &tex)
-  {
-    return loadTexture(tex, 0, 4);
-  }
-  
-  bool loadTexture(Texture &tex, GLuint tex_unit, int num_mipmaps = 4)
-  {
-    GLuint tex_id;
-    GLenum mode = GL_RGBA;
-
-    assert(tex_unit < GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS);
-
-    if(!tex.loaded()) {
-      if(!tex.load()) {
-        return false;
-      }
-    }
-
-    int bpp;
-    Uint32 rmask, gmask, bmask, amask;
-    SDL_PixelFormatEnumToMasks(SDL_PIXELFORMAT_ABGR8888, &bpp, &rmask, &gmask, &bmask, &amask);
-    SDL_Surface *surf = SDL_CreateRGBSurface(0, tex.width(), tex.height(), bpp, rmask, gmask, bmask, amask);
-    if(surf == NULL) {
-      return false;
-    }
-
-    SDL_SetSurfaceAlphaMod(surf, 0xFF);
-    SDL_SetSurfaceBlendMode(surf, SDL_BLENDMODE_NONE);
-    SDL_BlitSurface(tex.surface(), NULL, surf, NULL);
-
-    switch(surf->format->BytesPerPixel) {
-      case 3:
-        mode = GL_RGB;
-        break;
-      case 4:
-        mode = GL_RGBA;
-        break;
-      default:
-        std::cerr << "Unknown mode in " << tex.path() << "\t" << (int)surf->format->BytesPerPixel << std::endl;
-        return false;
-    }
-
-    //glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    //glPixelStorei(GL_UNPACK_ROW_LENGTH, surf->w);
-    //ASSERT_GL_ERROR;
-    glGenTextures(1, &tex_id);
-    ASSERT_GL_ERROR;
-    glBindTexture(GL_TEXTURE_2D, tex_id);
-    ASSERT_GL_ERROR;
-    glActiveTexture(GL_TEXTURE0 + tex_unit);
-    ASSERT_GL_ERROR;
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-    ASSERT_GL_ERROR;
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
-    ASSERT_GL_ERROR;
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, tex.repeatsX() ? GL_REPEAT : GL_CLAMP_TO_BORDER);
-    ASSERT_GL_ERROR;
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, tex.repeatsY() ? GL_REPEAT : GL_CLAMP_TO_BORDER);
-    ASSERT_GL_ERROR;
-    glTexImage2D(GL_TEXTURE_2D, 0, mode, surf->w, surf->h, 0, mode, GL_UNSIGNED_BYTE, surf->pixels);
-    ASSERT_GL_ERROR;
-    glGenerateMipmap(GL_TEXTURE_2D);
-    ASSERT_GL_ERROR;
-
-    glBindTexture(GL_TEXTURE_2D, 0);
-    ASSERT_GL_ERROR;
-    
-    _texture_handles[&tex] = tex_id;
-
-    SDL_FreeSurface(surf);
-
-    return true;
+    _default_texture->bind();
   }
 
   void useProgram(GLuint prog_id)
@@ -258,7 +170,29 @@ public:
     glUseProgram(prog_id);
     bindUniforms(prog_id);
     setColor(_uniform_color);
+    setSamplers(prog_id);
     bindMaterial(GL_FRONT_AND_BACK, _material);
+  }
+
+  void setSamplers(GLuint prog_id)
+  {
+    _shader_uniform_texture = glGetUniformLocation(prog_id, "tex");
+    glUniform1i(_shader_uniform_texture, 0);
+
+    GLuint loc = glGetUniformLocation(prog_id, "depth");
+    glUniform1i(loc, 1);
+
+    loc = glGetUniformLocation(prog_id, "velocity");
+    glUniform1i(loc, 2);
+
+    loc = glGetUniformLocation(prog_id, "bloom");
+    glUniform1i(loc, 3);
+
+    loc = glGetUniformLocation(prog_id, "fragment_data");
+    glUniform1i(loc, 4);
+
+    loc = glGetUniformLocation(prog_id, "last_frame");
+    glUniform1i(loc, 5);
   }
 
   void bindUniforms(GLuint prog_id)
@@ -269,7 +203,8 @@ public:
     _shader_in_time = glGetAttribLocation(prog_id, "inTime");
 
     _shader_uniform_color = glGetUniformLocation(prog_id, "uColor");
-    _shader_uniform_texture = glGetUniformLocation(prog_id, "tex");
+    _shader_uniform_velocity = glGetUniformLocation(prog_id, "uVelocity");
+    
     _shader_uniform_light0_position = glGetUniformLocation(prog_id, "uLight.position");
     _shader_uniform_light0_intensity = glGetUniformLocation(prog_id, "uLight.intensity");
     _shader_uniform_light0_color = glGetUniformLocation(prog_id, "uLight.color");
@@ -287,6 +222,13 @@ public:
     _projection.setLocation(glGetUniformLocation(prog_id, "mProjection"));
     _texture.setLocation(glGetUniformLocation(prog_id, "mTexture"));
     _color.setLocation(glGetUniformLocation(prog_id, "mColor"));
+
+    _shader_uniform_fragment = glGetUniformLocation(prog_id, "uFragmentId");
+    resetFragmentId();
+
+    _shader_uniform_fps = glGetUniformLocation(prog_id, "uFPS");
+    _shader_uniform_target_fps = glGetUniformLocation(prog_id, "uTargetFPS");
+    updateFPS();
     
     ASSERT_GL_ERROR;
   }
@@ -311,6 +253,21 @@ public:
     glUniform1i(_shader_in_time, t);
   }
 
+  GL3::Framebuffer &defaultFramebuffer()
+  {
+    return DefaultFramebuffer;
+  }
+
+  void pushProjectionMatrix()
+  {
+    _projection.push();
+  }
+
+  void popProjectionMatrix()
+  {
+    _projection.pop();
+  }
+  
   void setProjectionMatrix(const Matrix &m)
   {
     _projection.load(m);
@@ -352,6 +309,11 @@ public:
     glUniform4rv(_shader_uniform_color, 1, c);
     ASSERT_GL_ERROR;
   }
+
+  Matrix colorMatrix() const
+  {
+    return _color.top();
+  }
   
   void setColorMatrix(const Matrix &m)
   {
@@ -384,14 +346,14 @@ public:
   {
     _modelview.push();
     _modelview.mul(Matrix::translation(-origin) * Matrix::scale(size) * Matrix::rotateZ(angle) * Matrix::translation(position));
-    bindTexture(tex);
+    tex.bind(0);
     ASSERT_GL_ERROR;
     _quad->bind();
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     ASSERT_GL_ERROR;
     _quad->unbind();
     _modelview.pop();
-    unbindTexture();
+    tex.unbind();
   }
 
  void renderCameraAxis(const Camera &camera)
@@ -485,11 +447,46 @@ public:
   void setAmbientLight(const Vec3 &color)
   {
     glUniform3rv(_shader_uniform_ambient_light, 1, color);
+    ASSERT_GL_ERROR;
   }
 
   void moveLight(uint32_t id, const Vec3 &position)
   {
     glUniform4rv(_shader_uniform_light0_position, 1, _modelview.top() * position);
     ASSERT_GL_ERROR;
-  }    
+  }
+
+  void setVelocity(const Vec3 &v)
+  {
+    //glUniform3rv(_shader_uniform_velocity, 1, _modelview.top() * v);
+    // TODO: is the W component screwing velocity?
+    glUniform3rv(_shader_uniform_velocity, 1, _modelview.top() * (v * Vec3(1.0, 1.0, 1.0, 0.0)));
+    ASSERT_GL_ERROR;
+    updateFragmentId();
+  }
+
+  void updateFragmentId()
+  {
+    glUniform1i(_shader_uniform_fragment, _fragment++);
+    ASSERT_GL_ERROR;
+  }
+
+  void resetFragmentId()
+  {
+    _fragment = 0;
+    updateFragmentId();
+  }
+
+  Real currentTime() const { return SDL_GetTicks() / 1000.0; }
+
+  void updateFPS()
+  {
+    Real now = currentTime();
+    Real fps = 1.0 / (now - _last_frame_time);
+    if(fps == INFINITY) fps = _target_fps;
+    _last_frame_time = now;
+    glUniform1r(_shader_uniform_fps, fps);
+    glUniform1r(_shader_uniform_fps, _target_fps);
+    ASSERT_GL_ERROR;
+  }
 };
