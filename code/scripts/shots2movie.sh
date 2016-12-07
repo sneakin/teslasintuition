@@ -2,7 +2,7 @@
 
 PREFIX="${1}"
 OUTPUT=${2:-1.mp4}
-FPS_IN=30
+FPS_IN=${4:-30}
 FPS_OUT=${3:-30}
 
 # quanta-25316-2.bmp BMP3 800x600 800x600+0+0 8-bit sRGB 1.44MB 0.000u 0:00.000
