@@ -38,7 +38,7 @@ public:
   };
 
   ScreenShooter(int w, int h)
-    : _buffer(NULL), _bpp(3), _shots(0), _mode(OFF)
+    : _buffer(NULL), _bpp(4), _shots(0), _mode(OFF)
   {
     _pid = getpid();
     setWindowSize(w, h);
@@ -95,12 +95,12 @@ private:
   void doScreenShot()
   {
     // read the pixels to a buffer
-    glReadPixels(0, 0, _window_width, _window_height, GL_RGB, GL_UNSIGNED_BYTE, _buffer);
+    glReadPixels(0, 0, _window_width, _window_height, GL_RGBA, GL_UNSIGNED_BYTE, _buffer);
     ASSERT_GL_ERROR;
     mirrorBuffer();
 
     // convert the buffer to an image format
-    SDL_Surface *surf = SDL_CreateRGBSurfaceFrom(_buffer, _window_width, _window_height, _bpp*8, _window_width * _bpp, 0xFF, 0xFF00, 0xFF0000, 0);
+    SDL_Surface *surf = SDL_CreateRGBSurfaceFrom(_buffer, _window_width, _window_height, _bpp*8, _window_width * _bpp, 0xFF, 0xFF00, 0xFF0000, 0xFF000000);
     if(surf == NULL) {
       throw Error(*this);
     }
