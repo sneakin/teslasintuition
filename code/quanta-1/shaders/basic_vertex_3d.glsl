@@ -44,6 +44,8 @@ void main()
   Vert_Lastframe = vec3(mModelView * pos - vec4(uVelocity, 0.0));
   Vert_screen = mProjection * vec4(Vert, 1.0);
   Vert_screen_lastframe = mProjection * vec4(Vert_Lastframe, 1.0);
+  //vec4 Vert_Nextframe = mModelView * pos + vec4(uVelocity, 0.0);
+  //vec4 Vert_screen_nextframe = mProjection * Vert_Nextframe;
   Texture = vec2(mTexture * inTexture);
   Light0Position = vec3(uLight.position) - vec3(Vert.x, Vert.y, Vert.z);
   Light0Distance = length(Light0Position);

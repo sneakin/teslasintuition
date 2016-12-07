@@ -1,0 +1,94 @@
+#hdr
+#include "renderer.h"
+#include "vertex_shader.h"
+#include "fragment_shader.h"
+#include "shader_program.h"
+#end
+
+class BaseBlur
+{
+  Renderer &_renderer;
+  ShaderProgram _shader;
+  VertexShader _vertex_shader;
+  FragmentShader _fragment;
+  int _size;
+  float *_filter;
+
+public:
+  BaseBlur(Renderer &r, const char *blur_shader_path, int size)
+    : _renderer(r), _shader(r), _vertex_shader("shaders/basic_vertex.glsl"), _fragment(blur_shader_path), _size(0), _filter(NULL)
+  {
+    _shader.attach(_vertex_shader);
+    _shader.attach(_fragment);
+    _shader.bind_data(0, "outColor");
+    _shader.relink();
+
+    allocateFilter(size);
+    computeFilter();
+  }
+
+  virtual ~BaseBlur()
+  {
+    delete[] _filter;
+  }
+
+  void allocateFilter(int size)
+  {
+    if(_filter) delete[] _filter;
+    _filter = new float[size];
+    _size = size;
+  }
+
+  void computeFilter()
+  {
+    float n = 1.0;
+    int i;
+    for(i = 0; i < _size / 2; i++) {
+      _filter[i] = n;
+      _filter[_size - i - 1] = n;
+      n = n + n;
+    }
+    if(_size % 2 == 1) {
+      _filter[i / 2 + 1] = n;
+      n = n + n;
+    }
+    //n = n + n;
+    for(int i = 0; i < _size; i++) {
+      _filter[i] = _filter[i] / n;
+      std::cerr << i << "\t" << _filter[i] << std::endl;
+    }
+  }
+  
+  void render(Texture &colors)
+  {
+    _shader.bind();
+    bindUniforms();
+
+    _renderer.clear();
+    _renderer.pushModelViewMatrix(); {
+      _renderer.setModelViewMatrix(Matrix::identity());
+      _renderer.pushProjectionMatrix(); {
+        _renderer.setProjectionMatrix(Matrix::orthographicProjection(-1.0, -1.0, 1.0, 1.0, 100.0, -100.0));
+        _renderer.setVelocity(Vec3());
+        _renderer.setColor(Colors::White);
+        _renderer.renderSprite(colors, Vec3(-1, -1, -100), Vec3(0, 0), Vec3(2.0, 2.0, 1.0), 0);
+      } _renderer.popProjectionMatrix();
+    } _renderer.popModelViewMatrix();
+
+    ASSERT_GL_ERROR;
+  }
+
+  virtual void bindUniforms()
+  {
+    GLuint loc = glGetUniformLocation(_shader.id(), "inColors");
+    glUniform1i(loc, 0);
+
+    loc = glGetUniformLocation(_shader.id(), "inBlurSize");
+    glUniform1i(loc, _size);
+
+    loc = glGetUniformLocation(_shader.id(), "inBlurFilter");
+    glUniform1fv(loc, _size, _filter);
+
+    ASSERT_GL_ERROR;
+  }
+};

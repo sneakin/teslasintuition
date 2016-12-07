@@ -19,7 +19,7 @@ quanta_SRC = math-fun.lzz \
 	renderer/line_mesh.lzz \
 	renderer/gl3/framebuffer.lzz \
 	renderer/gl3/renderbuffer.lzz \
-  renderer/gl3/framebuffer_texture.lzz \
+        renderer/gl3/framebuffer_texture.lzz \
 	image.lzz \
 	renderer.lzz \
 	geometry/triangle.lzz \
@@ -41,6 +41,13 @@ quanta_SRC = math-fun.lzz \
 	vertex_array.lzz \
 	array_buffer.lzz \
 	index_buffer.lzz \
+	effects/downsampler.lzz \
+	effects/base_blur.lzz \
+	effects/horizontal_blur.lzz \
+	effects/vertical_blur.lzz \
+	effects/gaussian_blur.lzz \
+	effects/motion_blur.lzz \
+	effects/bloom.lzz \
 	main.lzz
 
 CFLAGS+=$(GLEW_CFLAGS)

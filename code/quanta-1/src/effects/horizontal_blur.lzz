@@ -1,0 +1,16 @@
+#hdr
+#include "renderer.h"
+#include "vertex_shader.h"
+#include "fragment_shader.h"
+#include "shader_program.h"
+#include "effects/base_blur.h"
+#end
+
+class HorizontalBlur: public BaseBlur
+{
+public:
+  HorizontalBlur(Renderer &r, int size)
+    : BaseBlur(r, "shaders/horizontal_blur.glsl", size)
+  {
+  }
+};

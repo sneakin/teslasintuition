@@ -67,14 +67,14 @@ public:
 
   GLuint id() const { return _id; }
 
-  void bind(GLenum tex_unit = 0) const
+  void bind(GLuint tex_unit = 0) const
   {
     glActiveTexture(GL_TEXTURE0 + tex_unit);
     glBindTexture(GL_TEXTURE_2D, _id);
     ASSERT_GL_ERROR;
   }
 
-  void unbind(GLenum tex_unit = 0) const
+  void unbind(GLuint tex_unit = 0) const
   {
     glActiveTexture(GL_TEXTURE0 + tex_unit);
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -168,9 +168,11 @@ public:
     bind();
     glTexImage2D(GL_TEXTURE_2D, 0, int_fmt, width, height, border, format, type, 0);
     ASSERT_GL_ERROR;
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, type == GL_FLOAT ? GL_NEAREST : GL_LINEAR );
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
     ASSERT_GL_ERROR;
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, type == GL_FLOAT ? GL_NEAREST : GL_LINEAR );
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
     ASSERT_GL_ERROR;
     unbind();
   }

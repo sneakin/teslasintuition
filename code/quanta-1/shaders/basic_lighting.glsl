@@ -75,7 +75,7 @@ void main()
   vec3 r = reflect(-light_dir, normal);
   float spec_angle = max(dot(r, surf_to_cam), 0.0);
   vec3 base_spec = uMaterial.specular.a * vec3(uMaterial.specular) * vec3(uLight.color) * falloff;
-  vec3 specular = base_spec * pow(spec_angle, 0.321 * uMaterial.shine);
+  vec3 specular = max(vec3(0.0, 0.0, 0.0), base_spec * pow(spec_angle, 0.321 * uMaterial.shine));
   vec3 super_specular = base_spec * pow(spec_angle, 0.321 * uMaterial.shine * 1.5);
 
   vec3 ambient = vec3(uMaterial.ambient) * uAmbientLight;
@@ -89,8 +89,9 @@ void main()
   outColor = mColor * vec4(c.r, c.g, c.b, 1.0);
   outColor.a = tex_color.a;
   //outVelocity = powv((Vert_screen - Vert_screen_lastframe) * 0.5 + 0.5, 3.0);
-  //outVelocity = (Vert_screen - Vert_screen_lastframe) * 0.5 + 0.5;
-  outVelocity = (Vert_screen - Vert_screen_lastframe);
+  outVelocity = (Vert_screen - Vert_screen_lastframe) * 0.5 + 0.5;
+  //outVelocity = (Vert_screen - Vert_screen_lastframe);
   outDepth = vec4(1.0 / Vert_screen.z, float(uFragmentId) / float(10), 0, 0);
-  outBloom = vec4(clamp(specular + emission, 0.0, 1.0), 1.0);
+  //outBloom = vec4(clamp(specular + emission, 0.0, 1.0), 1.0);
+  outBloom = vec4(specular + emission, 1.0);
 }

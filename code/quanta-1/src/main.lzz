@@ -29,6 +29,10 @@
 #include "renderer/gl3/framebuffer.h"
 #include "renderer/gl3/renderbuffer.h"
 #include "renderer/gl3/framebuffer_texture.h"
+#include "effects/motion_blur.h"
+#include "effects/bloom.h"
+#include "effects/downsampler.h"
+#include "effects/gaussian_blur.h"
 
 #define APP_TITLE "Quanta 1"
 #define APP_LOGO "logo.bmp"
@@ -129,16 +133,6 @@ int main(int argc, char *argv[])
   shader_2d.bind_data(3, "outDepth");
   shader_2d.relink();
 
-  ShaderProgram motion_blur(renderer);
-  motion_blur.attach(vertex_shader);
-  FragmentShader blur_shader("shaders/basic_fragment_blur.glsl");
-  motion_blur.attach(blur_shader);
-  motion_blur.bind_data(0, "outColor");
-  motion_blur.bind_data(1, "outVelocity");
-  motion_blur.bind_data(2, "outBloom");
-  motion_blur.bind_data(3, "outDepth");
-  motion_blur.relink();
-
 /*
   ShaderProgram no_blur(renderer);
   no_blur.attach(vertex_shader);
@@ -173,14 +167,19 @@ int main(int argc, char *argv[])
 
   const Vec3 fb_size(APP_WIDTH, APP_HEIGHT);
   GL3::FramebufferTexture fb1(APP_WIDTH, APP_HEIGHT), fb2(APP_WIDTH, APP_HEIGHT);
+  GL3::FramebufferTexture scratch_fb(APP_WIDTH, APP_HEIGHT), scaled_fb(APP_WIDTH, APP_HEIGHT);
   GL3::FramebufferTexture *front = &fb1, *back = &fb2;
+
+  MotionBlur mblur(renderer);
+  Bloom bloom(renderer, 4, 5, scratch_fb, scaled_fb);
+
   SDL_Event event;
   bool done = false;
   bool is_paused = false;
 
   GLuint last_now = 0, now = SDL_GetTicks();
 
-#ifdef TEST_SCENE
+//#ifdef TEST_SCENE
   Real x = 0.0, y = 0.0, scale = 1.0;
 
   shader_2d.bind();
@@ -277,21 +276,8 @@ int main(int argc, char *argv[])
     
     front->unbindFramebuffer();
 
-    motion_blur.bind();
-    renderer.clear();
     renderer.setViewport(0, 0, window_width, window_height);
-    renderer.pushProjectionMatrix(); {
-      renderer.setProjectionMatrix(Matrix::orthographicProjection(-1.0, -1.0, 1.0, 1.0, 100.0, -100.0));
-      front->colors().bind(0);
-      front->depth().bind(1);
-      front->velocity().bind(2);
-      front->bloom().bind(3);
-      front->mydepth().bind(4);
-      back->colors().bind(4);
-      renderer.setVelocity(Vec3());
-      renderer.setColor(Colors::White);
-      renderer.renderSprite(front->colors(), Vec3(-1, -1, 0), Vec3(0, 0), Vec3(2.0, 2.0, 1.0), 0);
-    } renderer.popProjectionMatrix();
+    mblur.render(front->colors(), front->depth(), front->velocity(), front->bloom());
     
     renderer.swap();
     GL3::FramebufferTexture *t = front;
@@ -300,7 +286,7 @@ int main(int argc, char *argv[])
     
     ASSERT_GL_ERROR;
   }
-#endif
+//#endif
   
   SDL_Joystick *joystick = SDL_JoystickOpen(joystick_index);
   if(joystick == NULL) {
@@ -579,9 +565,12 @@ int main(int argc, char *argv[])
         case SDL_WINDOWEVENT_RESIZED:
           window_width = event.window.data1;
           window_height = event.window.data2;
+          std::cerr << "Window resized to " << window_width << "x" << window_height << std::endl;
           renderer.setViewport(0, 0, window_width, window_height);
-          front->resize(window_width, window_height);
-          back->resize(window_width, window_height);
+          fb1.resize(window_width, window_height);
+          fb2.resize(window_width, window_height);
+          scratch_fb.resize(window_width, window_height);
+          scaled_fb.resize(window_width, window_height);
           screen_shooter.setWindowSize(window_width, window_height);
           break;
         }
@@ -770,15 +759,15 @@ int main(int argc, char *argv[])
 
     shaders.bind();
     renderer.pushProjectionMatrix();
-    front->bindFramebuffer();
+    fb1.bindFramebuffer();
     renderer.setViewport(window_width * 0.25, 0, window_width * 0.75, window_height);
 
     light_id = renderer.createPointLight(Vec3(0.0, 0.0, 0.0, 1.0), universe_size / 8.0, light_color);
     renderer.setAmbientLight(ambient_color);
 
     renderer.clear();
-    //front->clear(1, Vec3(0.5, 0.5, 0.5));
-    front->clear(1, Vec3(0.0, 0.0, 0.0, 1.0));
+    fb1.clear(1, Vec3(0.5, 0.5, 0.5));
+    //front->clear(1, Vec3(0.0, 0.0, 0.0, 1.0));
     //renderer.setProjectionMatrix(Matrix::perspectiveProjection(80.0, (Real)fb_size.x() / (Real)fb_size.y(), far_plane, near_plane));
     //renderer.setProjectionMatrix(Matrix::perspectiveProjection(80.0, (Real)window_width / (Real)window_height, far_plane, near_plane));
     renderer.setProjectionMatrix(Matrix::perspectiveProjection(80.0, (Real)(window_width * 0.75) / (Real)window_height, far_plane, near_plane));
@@ -789,11 +778,11 @@ int main(int argc, char *argv[])
     renderer.bindMaterial(GL_FRONT_AND_BACK, Renderer::AxisMaterial);
     renderer.renderPoint(light_pos, light_color, 10.0);
 
-#ifdef RENDER_ORIGIN
+//#ifdef RENDER_ORIGIN
     renderer.pushModelViewMatrix();
     renderer.setVelocity(Vec3());
     renderer.renderOriginAxis();
-#endif
+//#endif
 
 #ifdef RENDER_ROTATED_VECTOR
     renderer.bindMaterial(GL_FRONT_AND_BACK, Renderer::AxisMaterial);
@@ -820,26 +809,16 @@ int main(int argc, char *argv[])
 
     renderer.popProjectionMatrix();
 
-    front->unbindFramebuffer();
+    fb1.unbindFramebuffer();
     ASSERT_GL_ERROR;
 
-    motion_blur.bind();
+    // post processing
+    fb2.bindFramebuffer();
     renderer.setViewport(0, 0, window_width, window_height);
-    renderer.clear();
-    renderer.setModelViewMatrix(Matrix::identity());
-    renderer.pushProjectionMatrix(); {
-      renderer.setProjectionMatrix(Matrix::orthographicProjection(-1.0, -1.0, 1.0, 1.0, 100.0, -100.0));
-      front->colors().bind(0);
-      front->depth().bind(1);
-      front->velocity().bind(2);
-      front->bloom().bind(3);
-      front->mydepth().bind(4);
-      back->colors().bind(5);
-      renderer.setVelocity(Vec3());
-      renderer.setColor(Colors::White);
-      renderer.renderSprite(front->colors(), Vec3(-1, -1, -100), Vec3(0, 0), Vec3(2.0, 2.0, 1.0), 0);
-    } renderer.popProjectionMatrix();
+    mblur.render(fb1.colors(), fb1.depth(), fb1.velocity(), fb1.bloom());
+    bloom.render(renderer.defaultFramebuffer(), fb2.colors(), fb2.bloom(), 1.0);
 
+    // side panes
     renderer.setViewport(0, 0, window_width, window_height);
     shader_2d.bind();
     renderer.pushProjectionMatrix();
@@ -848,12 +827,14 @@ int main(int argc, char *argv[])
     renderer.setProjectionMatrix(Matrix::orthographicProjection(0.0, 0.0, 4.0, 4.0, 100.0, -100.0));
     renderer.setVelocity(Vec3());
     renderer.setColor(Colors::White);
-    renderer.renderSprite(front->colors(), Vec3(0, 0, 0.0), Vec3(0.0, 0.0), Vec3(1.0, 1.0, 1.0), 0.0);
+    renderer.renderSprite(fb1.colors(), Vec3(0, 0, 0.0), Vec3(0.0, 0.0), Vec3(1.0, 1.0, 1.0), 0.0);
     renderer.pushColorMatrix(); {
-      renderer.mulColorMatrix(Matrix::translation(0.5) * Matrix::scale(0.5));
-      renderer.renderSprite(front->velocity(), Vec3(0, 1, 0.0), Vec3(0.0, 0.0), Vec3(1.0, 1.0, 1.0), 0.0);
+      //renderer.mulColorMatrix(Matrix::translation(0.5) * Matrix::scale(0.5));
+      //renderer.mulColorMatrix(Matrix::scale(2.0) * Matrix::translation(-0.5));
+      renderer.renderSprite(fb1.velocity(), Vec3(0, 1, 0.0), Vec3(0.0, 0.0), Vec3(1.0, 1.0, 1.0), 0.0);
     } renderer.popColorMatrix();
-    renderer.renderSprite(front->bloom(), Vec3(0, 2, 0.0), Vec3(0.0, 0.0), Vec3(1.0, 1.0, 1.0), 0.0);
+    renderer.renderSprite(scaled_fb.colors(), Vec3(0, 2, 0.0), Vec3(0.0, 0.0), Vec3(1.0, 1.0, 1.0), 0.0);
+    renderer.renderSprite(fb2.bloom(), Vec3(0, 3, 0.0), Vec3(0.0, 0.0), Vec3(1.0, 1.0, 1.0), 0.0);
     renderer.popModelViewMatrix();
     renderer.popProjectionMatrix();
 
@@ -861,10 +842,6 @@ int main(int argc, char *argv[])
     ASSERT_GL_ERROR;
 
     screen_shooter.takeScreenShot();
-
-    GL3::FramebufferTexture *tmp = front;
-    front = back;
-    back = tmp;
 
     frames++;
     ms_per_frame = SDL_GetTicks() - frame_start;

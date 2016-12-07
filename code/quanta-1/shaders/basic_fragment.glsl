@@ -33,7 +33,7 @@ void main()
 {
   outColor = mColor * (vec4(texture(tex, Texture).rgb, 1.0) * Color);
   outVelocity = (Vert_screen - Vert_screen_lastframe);
-  //outVelocity = outVelocity * 0.5 + 0.5;
+  outVelocity = outVelocity * 0.5 + 0.5;
   //outVelocity = powv(outVelocity, 1.0 / 3.0);
   float far = 200.0, near = -200.0;
   //vec4 d = vec4(Vert_screen.x, Vert_screen.y, Vert_screen.z, float(uFragmentId) / float(MAX_INT));

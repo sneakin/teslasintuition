@@ -37,6 +37,8 @@ public:
     glDeleteProgram(_id);
   }
 
+  GLuint id() const { return _id; }
+
   void attach(Shader &shader)
   {
     glAttachShader(_id, shader.id());
