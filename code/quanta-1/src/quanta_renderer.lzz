@@ -1,7 +1,8 @@
 #hdr
-#include "renderer.h"
+#include "canvas.h"
 #include "geometry/icosahedron.h"
 #include "geometry/icosahedron_renderer.h"
+#include "renderer/material.h"
 #include "quanta.h"
 #end
 
@@ -14,28 +15,28 @@ class QuantaRenderer
 public:
   Icosahedron _icosa;
   IcosahedronRenderer _icosa_ren;
-  Renderer &_renderer;
+  Canvas3D &_canvas;
 
   static const Material QuantaMaterial = Material(Colors::White, Colors::White * 0.5, 100.0, Colors::White * 0.8);
 
-  QuantaRenderer(Renderer &renderer)
-    : _icosa(1.0), _icosa_ren(_icosa, renderer), _renderer(renderer)
+  QuantaRenderer(Canvas3D &canvas)
+    : _icosa(1.0), _icosa_ren(_icosa, canvas), _canvas(canvas)
   {
   }
 
   void render(const Camera &camera, const Quanta &quanta)
   {
-    _renderer.unbindTexture();
-    _renderer.bindMaterial(GL_FRONT_AND_BACK, QuantaMaterial);
+    _canvas.unbindTexture();
+    _canvas.bindMaterial(GL_FRONT_AND_BACK, QuantaMaterial);
     
     for(int i = 0; i < quanta.size(); i++) {
       Quantum q = quanta[i];
-      _renderer.pushModelViewMatrix(); {
-        _renderer.mulModelViewMatrix(Matrix::scale(Vec3(quanta.quantum_radius(), quanta.quantum_radius(), quanta.quantum_radius())) * Matrix::translation(q.position()));
-        _renderer.setColor(q.color().abs() + Vec3::W);
-        _renderer.setVelocity(q.velocity());
+      _canvas.pushModelViewMatrix(); {
+        _canvas.mulModelViewMatrix(Matrix::scale(Vec3(quanta.quantum_radius(), quanta.quantum_radius(), quanta.quantum_radius())) * Matrix::translation(q.position()));
+        _canvas.setColor(q.color().abs() + Vec3::W);
+        _canvas.setVelocity(q.velocity());
         _icosa_ren.render(camera);
-      } _renderer.popModelViewMatrix();
+      } _canvas.popModelViewMatrix();
     }
   }
 
@@ -43,9 +44,9 @@ public:
   {
     for(int i = 0; i < quanta.size(); i++) {
       Quantum q = quanta[i];
-      _renderer.bindMaterial(GL_FRONT_AND_BACK, Renderer::AxisMaterial);
-      _renderer.setVelocity(q.velocity());
-      _renderer.renderVector(q.position(), q.velocity() * _icosa.radius() * 10.0, q.color());
+      _canvas.bindMaterial(GL_FRONT_AND_BACK, Canvas3D::AxisMaterial);
+      _canvas.setVelocity(q.velocity());
+      _canvas.renderVector(q.position(), q.velocity() * _icosa.radius() * 10.0, q.color());
     }
   }
 };

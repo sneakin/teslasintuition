@@ -34,6 +34,7 @@ public:
       error = glGetError();                                      \
       if(error != GL_NO_ERROR) {                                        \
         std::cerr << "GL error:" << __FILE__ << ":" << __LINE__ << ": " << gluErrorString(error) << std::endl; \
+        throw GLError(__FILE__, __LINE__, error);                       \
       }                                                                 \
       last_error = error;                                               \
     } while(error != GL_NO_ERROR);                                      \

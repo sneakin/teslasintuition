@@ -1,16 +1,12 @@
 #hdr
-#include "renderer.h"
-#include "vertex_shader.h"
-#include "fragment_shader.h"
-#include "shader_program.h"
 #include "effects/base_blur.h"
 #end
 
 class VerticalBlur: public BaseBlur
 {
 public:
-  VerticalBlur(Renderer &r, int size)
-    : BaseBlur(r, "shaders/vertical_blur.glsl", size)
+  VerticalBlur(Canvas2D &c, int size)
+    : BaseBlur(c, "shaders/vertical_blur.glsl", size)
   {
   }
 };

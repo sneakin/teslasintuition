@@ -1,5 +1,5 @@
 #hdr
-#include "renderer.h"
+#include "canvas.h"
 #include "vertex_shader.h"
 #include "fragment_shader.h"
 #include "shader_program.h"
@@ -8,13 +8,18 @@
 class MotionBlur
 {
   Renderer &_renderer;
+  Canvas2D &_canvas;
   ShaderProgram _shader;
   VertexShader _vertex_shader;
   FragmentShader _blur_shader;
 
 public:
-  MotionBlur(Renderer &r)
-    : _renderer(r), _shader(r), _vertex_shader("shaders/basic_vertex.glsl"), _blur_shader("shaders/basic_fragment_blur.glsl")
+  MotionBlur(Canvas2D &canvas)
+    : _renderer(canvas.renderer()),
+      _canvas(canvas),
+      _shader(canvas.renderer()),
+      _vertex_shader("shaders/basic_vertex.glsl"),
+      _blur_shader("shaders/basic_fragment_blur.glsl")
   {
     _shader.attach(_vertex_shader);
     _shader.attach(_blur_shader);
@@ -25,21 +30,21 @@ public:
   }
 
   void render(Texture &colors, Texture &depth, Texture &velocities, Texture &bloom)
-  {
-    _shader.bind();
+  { 
+    _canvas.bind(_shader);
     _renderer.clear();
-    _renderer.pushModelViewMatrix(); {
-      _renderer.setModelViewMatrix(Matrix::identity());
-      _renderer.pushProjectionMatrix(); {
-        _renderer.setProjectionMatrix(Matrix::orthographicProjection(-1.0, -1.0, 1.0, 1.0, 100.0, -100.0));
+    _canvas.pushModelViewMatrix(); {
+      _canvas.setModelViewMatrix(Matrix::identity());
+      _canvas.pushProjectionMatrix(); {
+        _canvas.setProjectionMatrix(Matrix::orthographicProjection(-1.0, -1.0, 1.0, 1.0, 100.0, -100.0));
         colors.bind(0); // TODO remove or remove arg from renderSprite
         depth.bind(1);
         velocities.bind(2);
         bloom.bind(3);
-        _renderer.setVelocity(Vec3());
-        _renderer.setColor(Colors::White);
-        _renderer.renderSprite(colors, Vec3(-1, -1, -100), Vec3(0, 0), Vec3(2.0, 2.0, 1.0), 0);
-      } _renderer.popProjectionMatrix();
-    } _renderer.popModelViewMatrix();
+        _canvas.setVelocity(Vec3());
+        _canvas.setColor(Colors::White);
+        _canvas.renderSprite(colors, Vec3(-1, -1, -100), Vec3(0, 0), Vec3(2.0, 2.0, 1.0), 0);
+      } _canvas.popProjectionMatrix();
+    } _canvas.popModelViewMatrix();
   }
 };

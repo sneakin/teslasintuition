@@ -41,7 +41,8 @@ void main()
   //vv = powv(vv, 1.0 / 3.0);
   vv = (vv - 0.5) * 2.0;
   float d = texture(depth, Texture).r;
-  float scale = uTargetFPS / uFPS;
+  //float scale = uTargetFPS / uFPS;
+  float scale = 1.0;
   vec2 v = clamp(vec2(vv.x, vv.y) * scale, float(-MAX_VELOCITY) * texel.x, float(MAX_VELOCITY) * texel.x);
   int num_samples = int(clamp(length(v) / texel.x, 0, MAX_SAMPLES));
   int samples = 1;

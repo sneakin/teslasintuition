@@ -64,12 +64,30 @@ public:
   void bind_data(GLuint location, const char *name)
   {
     glBindFragDataLocation(_id, location, name);
+    ASSERT_GL_ERROR;
   }
 
-  void setUniform(const char *uniform, GLuint value)
+  void setUniformi(const char *uniform, GLuint value)
   {
-    GLuint location = glGetUniformLocation(_id, uniform);
-    glUniform1i(location, value);
+    glUniform1i(uniformLocation(uniform), value);
+    ASSERT_GL_ERROR;
   }
-  
+
+  void setUniformr(const char *uniform, Real value)
+  {
+    glUniform1r(uniformLocation(uniform), value);
+    ASSERT_GL_ERROR;
+  }
+
+  void setUniformfv(const char *uniform, GLuint count, const GLfloat values[])
+  {
+    GLuint loc = uniformLocation(uniform);
+    glUniform1fv(loc, count, values);
+    ASSERT_GL_ERROR;
+  }
+
+  GLuint uniformLocation(const char *uniform)
+  {
+    return glGetUniformLocation(_id, uniform);
+  }
 };

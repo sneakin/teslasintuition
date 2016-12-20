@@ -1,5 +1,5 @@
 #hdr
-#include "renderer.h"
+#include "canvas.h"
 #include "geometry/icosahedron.h"
 #include "vertex_array.h"
 #include "array_buffer.h"
@@ -14,14 +14,14 @@
 class IcosahedronRenderer
 {
   const Icosahedron &_icosa;
-  Renderer &_renderer;
+  Canvas3D &_canvas;
   ArrayBuffer<Vec3> _verts;
   IndexBuffer<Icosahedron::Face> _faces;
   VertexArray _vert_buffer;
 
 public:
-  IcosahedronRenderer(const Icosahedron &icosa, Renderer &r)
-    : _icosa(icosa), _renderer(r), _verts(r), _faces(r), _vert_buffer(r)
+  IcosahedronRenderer(const Icosahedron &icosa, Canvas3D &canvas)
+    : _icosa(icosa), _canvas(canvas), _verts(canvas.renderer()), _faces(canvas.renderer()), _vert_buffer(canvas.renderer())
   {
     setupBuffers();
   }
@@ -30,8 +30,9 @@ public:
   {
     _vert_buffer.bind();
     _verts.update(_icosa.vertices(), Icosahedron::NumPoints);
-    _vert_buffer.enableAttribute(0, 4, GL_REAL, GL_FALSE, 0, 0);
-    _vert_buffer.enableAttribute(2, 4, GL_REAL, GL_FALSE, 0, 0);
+    _vert_buffer.enableAttribute(_canvas.positionAttribute(), 4, GL_REAL, GL_FALSE, 0, 0);
+    // reuse vertices for the normals
+    _vert_buffer.enableAttribute(_canvas.normalAttribute(), 4, GL_REAL, GL_FALSE, 0, 0);
     _vert_buffer.unbind();
 
     _faces.update(_icosa.faces(), Icosahedron::NumFaces);

@@ -121,41 +121,11 @@ int main(int argc, char *argv[])
   
 
   ASSERT_GL_ERROR;
-  
-  ShaderProgram shader_2d(renderer);
-  VertexShader vertex_shader("shaders/basic_vertex.glsl");
-  shader_2d.attach(vertex_shader);
-  FragmentShader fragment_2d_shader("shaders/basic_fragment.glsl");
-  shader_2d.attach(fragment_2d_shader);
-  shader_2d.bind_data(0, "outColor");
-  shader_2d.bind_data(1, "outVelocity");
-  shader_2d.bind_data(2, "outBloom");
-  shader_2d.bind_data(3, "outDepth");
-  shader_2d.relink();
 
-/*
-  ShaderProgram no_blur(renderer);
-  no_blur.attach(vertex_shader);
-  FragmentShader no_blur_shader("shaders/basic_fragment_blur.glsl");
-  no_blur.attach(blur_shader);
-  no_blur.bind_data(0, "outColor");
-  no_blur.bind_data(1, "outVelocity");
-  no_blur.bind_data(3, "outDepth");
-  no_blur.relink();
-  */
-
-  ShaderProgram shaders(renderer);
-  VertexShader vertex_3d_shader("shaders/basic_vertex_3d.glsl");
-  shaders.attach(vertex_3d_shader);
-  FragmentShader fragment_shader("shaders/basic_lighting.glsl");
-  shaders.attach(fragment_shader);
-  shaders.bind_data(0, "outColor");
-  shaders.bind_data(1, "outVelocity");
-  shaders.bind_data(2, "outBloom");
-  shaders.bind_data(3, "outDepth");
-  shaders.relink();
-
-  ASSERT_GL_ERROR;
+  StockShaderProgram shader_2d(renderer, "shaders/basic_vertex.glsl", "shaders/basic_fragment.glsl");
+  StockShaderProgram shader_3d(renderer, "shaders/basic_vertex_3d.glsl", "shaders/basic_lighting.glsl");
+  Canvas2D canvas_2d(renderer);
+  Canvas3D canvas_3d(renderer);
   
   Texture logo(APP_TEXTURE_PATH + APP_LOGO);
 
@@ -170,8 +140,8 @@ int main(int argc, char *argv[])
   GL3::FramebufferTexture scratch_fb(APP_WIDTH, APP_HEIGHT), scaled_fb(APP_WIDTH, APP_HEIGHT);
   GL3::FramebufferTexture *front = &fb1, *back = &fb2;
 
-  MotionBlur mblur(renderer);
-  Bloom bloom(renderer, 4, 5, scratch_fb, scaled_fb);
+  MotionBlur mblur(canvas_2d);
+  Bloom bloom(canvas_2d, 4, 5, scratch_fb, scaled_fb);
 
   SDL_Event event;
   bool done = false;
@@ -179,13 +149,11 @@ int main(int argc, char *argv[])
 
   GLuint last_now = 0, now = SDL_GetTicks();
 
-//#ifdef TEST_SCENE
+#if 1 //def TEST_SCENE
   Real x = 0.0, y = 0.0, scale = 1.0;
 
-  shader_2d.bind();
-  renderer.setProjectionMatrix(Matrix::orthographicProjection(0.0, 0.0, 10.0, 10.0, 100.0, -100.0));
-  //renderer.setProjectionMatrix(Matrix::identity());
-  //renderer.setModelViewMatrix(Matrix::translation(5.0, 0.0, 0.0) * Matrix::rotateZ(M_PI / 3.0));
+  canvas_2d.bind(shader_2d);
+  canvas_2d.setProjectionMatrix(Matrix::orthographicProjection(0.0, 0.0, 10.0, 10.0, 100.0, -100.0));
   renderer.setClearColor(Vec3(0, 0, 0, 0));
   renderer.setDepthTest(GL_LEQUAL);
 
@@ -232,47 +200,41 @@ int main(int argc, char *argv[])
 
     front->bindFramebuffer();
     renderer.setViewport(0, 0, fb_size.x(), fb_size.y());
-    shader_2d.bind();
-    renderer.setAmbientLight(Colors::White * 0.5);
+    canvas_2d.bind(shader_2d);
 
-    renderer.pushProjectionMatrix(); {
+    canvas_2d.pushProjectionMatrix(); {
       renderer.clear();
       //front->clear(1, Vec3(0.5, 0.5, 0.5));
       front->clear(1, Vec3::W);
-      renderer.setProjectionMatrix(Matrix::orthographicProjection(0.0, 0.0, 10.0, 10.0, 200.0, -200.0));
-      renderer.setVelocity(mouse - last_mouse);
-      renderer.setColor(Colors::White);
-      renderer.renderSprite(logo, mouse + Vec3(0.0, 0.0, -1.0), Vec3(0.5, 0.5, 0), Vec3(scale, scale, 1.0), 0); //now / 1000.0);
-      renderer.setVelocity(Vec3());
-      renderer.setColor(Colors::White);
-      renderer.renderSprite(back->colors(), Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0), Vec3(2.0, 2.0, 1.0), 0.0);
-      renderer.pushColorMatrix(); {
-        renderer.mulColorMatrix(Matrix::translation(0.5) * Matrix::scale(0.5));
-        renderer.renderSprite(back->velocity(), Vec3(0.0, 2.0, 0.0), Vec3(0.0, 0.0), Vec3(2.0, 2.0, 1.0), 0.0);
-      } renderer.popColorMatrix();
-      renderer.pushColorMatrix(); {
+      canvas_2d.setProjectionMatrix(Matrix::orthographicProjection(0.0, 0.0, 10.0, 10.0, 200.0, -200.0));
+      canvas_2d.setVelocity(mouse - last_mouse);
+      canvas_2d.setColor(Colors::White);
+      canvas_2d.renderSprite(logo, mouse + Vec3(0.0, 0.0, -1.0), Vec3(0.5, 0.5, 0), Vec3(scale, scale, 1.0), 0); //now / 1000.0);
+      canvas_2d.setVelocity(Vec3());
+      canvas_2d.setColor(Colors::White);
+      canvas_2d.renderSprite(back->colors(), Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0), Vec3(2.0, 2.0, 1.0), 0.0);
+      canvas_2d.pushColorMatrix(); {
+        canvas_2d.mulColorMatrix(Matrix::translation(0.5) * Matrix::scale(0.5));
+        canvas_2d.renderSprite(back->velocity(), Vec3(0.0, 2.0, 0.0), Vec3(0.0, 0.0), Vec3(2.0, 2.0, 1.0), 0.0);
+      } canvas_2d.popColorMatrix();
+      canvas_2d.pushColorMatrix(); {
         Matrix m = Matrix::translation(Vec3(1.0, 1.0, 1.0)) * Matrix::scale(-1.0);
-        // m = Matrix(1, 0, 0, 0,
-        //            1, 0, 0, 0,
-        //            1, 0, 0, 0,
-        //            0, 0, 0, 1) * m;
-        renderer.mulColorMatrix(m);
-        renderer.renderSprite(back->mydepth(), Vec3(0.0, 4.0, 0.0), Vec3(0.0, 0.0), Vec3(2.0, 2.0, 1.0), 0.0);
-        renderer.renderSprite(back->depth(), Vec3(0.0, 6.0, 0.0), Vec3(0.0, 0.0), Vec3(2.0, 2.0, 1.0), 0.0);
-      } renderer.popColorMatrix();
-      renderer.pushModelViewMatrix();
-      renderer.mulModelViewMatrix(Matrix::scale(Vec3(0.5, 0.5, 1.0)) * Matrix::translation(Vec3(5, 5)));
-      for(int n = -10; n <= 10; n++) {
-        Matrix r = Matrix::rotateZ(now * 2.0 * M_PI / 1000.0 * 0.5);
-        Matrix next_r = Matrix::rotateZ((float)(now + (now - last_now)) * 2.0 * M_PI / 1000.0 * 0.5);
-        Vec3 p = Matrix::translation(Vec3(0.0, 0.0, 10 * n)) * Matrix::rotateZ((float)n * 2.0 * M_PI / (float)10) * Matrix::scale(4.0) * Vec3::X;
-        Vec3 np = r * p, op = next_r * p;
-        //Vec3 p = Vec3(n, n, 10 * n);
-        renderer.setVelocity(np - op);
-        renderer.renderSprite(logo, np, Vec3(0.5, 0.5), Vec3(scale / 2, scale / 2, 1.0), (float)n * 2.0 * M_PI / (float)10);
-      }
-      renderer.popModelViewMatrix();
-    } renderer.popProjectionMatrix();
+        canvas_2d.mulColorMatrix(m);
+        canvas_2d.renderSprite(back->mydepth(), Vec3(0.0, 4.0, 0.0), Vec3(0.0, 0.0), Vec3(2.0, 2.0, 1.0), 0.0);
+        canvas_2d.renderSprite(back->depth(), Vec3(0.0, 6.0, 0.0), Vec3(0.0, 0.0), Vec3(2.0, 2.0, 1.0), 0.0);
+      } canvas_2d.popColorMatrix();
+      canvas_2d.pushModelViewMatrix(); {
+        canvas_2d.mulModelViewMatrix(Matrix::scale(Vec3(0.5, 0.5, 1.0)) * Matrix::translation(Vec3(5, 5)));
+        for(int n = -10; n <= 10; n++) {
+          Matrix r = Matrix::rotateZ(now * 2.0 * M_PI / 1000.0 * 0.5);
+          Matrix next_r = Matrix::rotateZ((float)(now + (now - last_now)) * 2.0 * M_PI / 1000.0 * 0.5);
+          Vec3 p = Matrix::translation(Vec3(0.0, 0.0, 10 * n)) * Matrix::rotateZ((float)n * 2.0 * M_PI / (float)10) * Matrix::scale(4.0) * Vec3::X;
+          Vec3 np = r * p, op = next_r * p;
+          canvas_2d.setVelocity(np - op);
+          canvas_2d.renderSprite(logo, np, Vec3(0.5, 0.5), Vec3(scale / 2, scale / 2, 1.0), (float)n * 2.0 * M_PI / (float)10);
+        }
+      } canvas_2d.popModelViewMatrix();
+    } canvas_2d.popProjectionMatrix();
     
     front->unbindFramebuffer();
 
@@ -286,7 +248,7 @@ int main(int argc, char *argv[])
     
     ASSERT_GL_ERROR;
   }
-//#endif
+#endif /* TEST_SCENE */
   
   SDL_Joystick *joystick = SDL_JoystickOpen(joystick_index);
   if(joystick == NULL) {
@@ -309,13 +271,9 @@ int main(int argc, char *argv[])
   Camera *view_camera = camera;
 
   Quanta quanta(quantum_radius);
-  QuantaRenderer quanta_renderer(renderer);
+  QuantaRenderer quanta_renderer(canvas_3d);
 
   PlayerCommandState player_command_state;
-
-  renderer.setTextureMatrix(Matrix::identity());
-  renderer.setColorMatrix(Matrix::identity());
-  renderer.setModelViewMatrix(Matrix::identity());
 
   renderer.setDepthTest(GL_LEQUAL);
   renderer.setCullFace(GL_BACK);
@@ -330,11 +288,11 @@ int main(int argc, char *argv[])
   ScreenShooter screen_shooter(window_width, window_height);
 
   done = false;
-  shaders.bind();
+  canvas_3d.bind(shader_3d);
   
   Vec3 light_color(Colors::White), ambient_color(light_color * 0.1);
-  uint32_t light_id = renderer.createPointLight(Vec3(0.0, 0.0, 0.0, 1.0), universe_size / 8.0, light_color);
-  renderer.setAmbientLight(ambient_color);
+  uint32_t light_id = canvas_3d.createPointLight(Vec3(0.0, 0.0, 0.0, 1.0), universe_size / 8.0, light_color);
+  canvas_3d.setAmbientLight(ambient_color);
 
   while(!done) {
     frame_start = SDL_GetTicks();
@@ -757,57 +715,55 @@ int main(int argc, char *argv[])
     renderer.updateTime(now);
     //renderer.setColorMatrix(Matrix::rotate(Vec3(now / 1000.0, now / 1000.0, now / 1000.0)));
 
-    shaders.bind();
-    renderer.pushProjectionMatrix();
-    fb1.bindFramebuffer();
-    renderer.setViewport(window_width * 0.25, 0, window_width * 0.75, window_height);
+    canvas_3d.bind(shader_3d);
+    canvas_3d.pushProjectionMatrix(); {
+      fb1.bindFramebuffer();
+      renderer.setViewport(window_width * 0.25, 0, window_width * 0.75, window_height);
 
-    light_id = renderer.createPointLight(Vec3(0.0, 0.0, 0.0, 1.0), universe_size / 8.0, light_color);
-    renderer.setAmbientLight(ambient_color);
+      light_id = canvas_3d.createPointLight(Vec3(0.0, 0.0, 0.0, 1.0), universe_size / 8.0, light_color);
+      canvas_3d.setAmbientLight(ambient_color);
 
-    renderer.clear();
-    fb1.clear(1, Vec3(0.5, 0.5, 0.5));
-    //front->clear(1, Vec3(0.0, 0.0, 0.0, 1.0));
-    //renderer.setProjectionMatrix(Matrix::perspectiveProjection(80.0, (Real)fb_size.x() / (Real)fb_size.y(), far_plane, near_plane));
-    //renderer.setProjectionMatrix(Matrix::perspectiveProjection(80.0, (Real)window_width / (Real)window_height, far_plane, near_plane));
-    renderer.setProjectionMatrix(Matrix::perspectiveProjection(80.0, (Real)(window_width * 0.75) / (Real)window_height, far_plane, near_plane));
-    renderer.setCamera(*camera);
-    //Vec3 light_pos(Matrix::rotateZ(SDL_GetTicks() * M_PI / 1000.0 / 8.0) * Matrix::rotateY(SDL_GetTicks() * M_PI / 1000.0 / 4.0) * Vec3(16.0, 0.0, 0.0));
-    Vec3 light_pos(Vec3(0.0, 0.0, 0.0));
-    renderer.moveLight(light_id, light_pos);
-    renderer.bindMaterial(GL_FRONT_AND_BACK, Renderer::AxisMaterial);
-    renderer.renderPoint(light_pos, light_color, 10.0);
+      renderer.clear();
+      fb1.clear(1, Vec3(0.5, 0.5, 0.5));
+      //front->clear(1, Vec3(0.0, 0.0, 0.0, 1.0));
+      canvas_3d.setProjectionMatrix(Matrix::perspectiveProjection(80.0, (Real)(window_width * 0.75) / (Real)window_height, far_plane, near_plane));
+      canvas_3d.setCamera(*camera);
+      //Vec3 light_pos(Matrix::rotateZ(SDL_GetTicks() * M_PI / 1000.0 / 8.0) * Matrix::rotateY(SDL_GetTicks() * M_PI / 1000.0 / 4.0) * Vec3(16.0, 0.0, 0.0));
+      Vec3 light_pos(Vec3(0.0, 0.0, 0.0));
+      canvas_3d.moveLight(light_id, light_pos);
+      canvas_3d.bindMaterial(GL_FRONT_AND_BACK, Canvas3D::AxisMaterial);
+      canvas_3d.renderPoint(light_pos, light_color, 10.0);
 
-//#ifdef RENDER_ORIGIN
-    renderer.pushModelViewMatrix();
-    renderer.setVelocity(Vec3());
-    renderer.renderOriginAxis();
-//#endif
+      //#ifdef RENDER_ORIGIN
+      canvas_3d.pushModelViewMatrix(); {
+        canvas_3d.setVelocity(Vec3());
+        canvas_3d.renderOriginAxis();
+      } canvas_3d.popModelViewMatrix();
+      //#endif
 
 #ifdef RENDER_ROTATED_VECTOR
-    renderer.bindMaterial(GL_FRONT_AND_BACK, Renderer::AxisMaterial);
+      renderer.bindMaterial(GL_FRONT_AND_BACK, Canvas3D::AxisMaterial);
     
-    for(int i = 0; i < 32; i++) {
-      float t = 0; SDL_GetTicks() / 1000.0 * 2.0 * M_PI;
-      float a = i * 2.0 * M_PI / 32.0;
-      Vec3 angles = Vec3(a + t, a + t, a + t);
-      //renderer.renderVector(Vec3(), (Matrix::rotate(angles) * Vec3::X).normalize() * 10.0, Colors::Cyan);
-      //renderer.renderVector(Vec3(), (Matrix::rotate(angles * Vec3(1.0, 0.0, 1.0, 1.0)) * Vec3::X).normalize() * 10.0, Colors::Magenta);
-      renderer.pushModelViewMatrix();
-      renderer.mulModelViewMatrix(Matrix::rotate(Vec3::Y * t));
-      renderer.setVelocity(Vec3());
-      renderer.renderVector(Vec3(), (Matrix::rotate(angles) * Vec3::X).normalize() * 10.0, Colors::Magenta);
-      renderer.popModelViewMatrix();
-    }
-    renderer.popModelViewMatrix();
+      for(int i = 0; i < 32; i++) {
+        float t = 0; SDL_GetTicks() / 1000.0 * 2.0 * M_PI;
+        float a = i * 2.0 * M_PI / 32.0;
+        Vec3 angles = Vec3(a + t, a + t, a + t);
+        //renderer.renderVector(Vec3(), (Matrix::rotate(angles) * Vec3::X).normalize() * 10.0, Colors::Cyan);
+        //renderer.renderVector(Vec3(), (Matrix::rotate(angles * Vec3(1.0, 0.0, 1.0, 1.0)) * Vec3::X).normalize() * 10.0, Colors::Magenta);
+        canvas_3d.pushModelViewMatrix(); {
+          canvas_3d.mulModelViewMatrix(Matrix::rotate(Vec3::Y * t));
+          canvas_3d.setVelocity(Vec3());
+          canvas_3d.renderVector(Vec3(), (Matrix::rotate(angles) * Vec3::X).normalize() * 10.0, Colors::Magenta);
+        } canvas_3d.popModelViewMatrix();
+      }
 #endif
     
-    renderer.pushModelViewMatrix(); {
-      quanta_renderer.render(*view_camera, quanta);
-      //quanta_renderer.renderVelocities(*view_camera, quanta);
-    } renderer.popModelViewMatrix();
+      canvas_3d.pushModelViewMatrix(); {
+        quanta_renderer.render(*view_camera, quanta);
+        //quanta_renderer.renderVelocities(*view_camera, quanta);
+      } canvas_3d.popModelViewMatrix();
 
-    renderer.popProjectionMatrix();
+    } canvas_3d.popProjectionMatrix();
 
     fb1.unbindFramebuffer();
     ASSERT_GL_ERROR;
@@ -820,23 +776,23 @@ int main(int argc, char *argv[])
 
     // side panes
     renderer.setViewport(0, 0, window_width, window_height);
-    shader_2d.bind();
-    renderer.pushProjectionMatrix();
-    renderer.pushModelViewMatrix();
-    renderer.setModelViewMatrix(Matrix::identity());
-    renderer.setProjectionMatrix(Matrix::orthographicProjection(0.0, 0.0, 4.0, 4.0, 100.0, -100.0));
-    renderer.setVelocity(Vec3());
-    renderer.setColor(Colors::White);
-    renderer.renderSprite(fb1.colors(), Vec3(0, 0, 0.0), Vec3(0.0, 0.0), Vec3(1.0, 1.0, 1.0), 0.0);
-    renderer.pushColorMatrix(); {
-      //renderer.mulColorMatrix(Matrix::translation(0.5) * Matrix::scale(0.5));
-      //renderer.mulColorMatrix(Matrix::scale(2.0) * Matrix::translation(-0.5));
-      renderer.renderSprite(fb1.velocity(), Vec3(0, 1, 0.0), Vec3(0.0, 0.0), Vec3(1.0, 1.0, 1.0), 0.0);
-    } renderer.popColorMatrix();
-    renderer.renderSprite(scaled_fb.colors(), Vec3(0, 2, 0.0), Vec3(0.0, 0.0), Vec3(1.0, 1.0, 1.0), 0.0);
-    renderer.renderSprite(fb2.bloom(), Vec3(0, 3, 0.0), Vec3(0.0, 0.0), Vec3(1.0, 1.0, 1.0), 0.0);
-    renderer.popModelViewMatrix();
-    renderer.popProjectionMatrix();
+    canvas_2d.bind(shader_2d);
+    canvas_2d.pushProjectionMatrix(); {
+      canvas_2d.pushModelViewMatrix(); {
+        canvas_2d.setModelViewMatrix(Matrix::identity());
+        canvas_2d.setProjectionMatrix(Matrix::orthographicProjection(0.0, 0.0, 4.0, 4.0, 100.0, -100.0));
+        canvas_2d.setVelocity(Vec3());
+        canvas_2d.setColor(Colors::White);
+        canvas_2d.renderSprite(fb1.colors(), Vec3(0, 0, 0.0), Vec3(0.0, 0.0), Vec3(1.0, 1.0, 1.0), 0.0);
+        canvas_2d.pushColorMatrix(); {
+          //renderer.mulColorMatrix(Matrix::translation(0.5) * Matrix::scale(0.5));
+          //renderer.mulColorMatrix(Matrix::scale(2.0) * Matrix::translation(-0.5));
+          canvas_2d.renderSprite(fb1.velocity(), Vec3(0, 1, 0.0), Vec3(0.0, 0.0), Vec3(1.0, 1.0, 1.0), 0.0);
+        } canvas_2d.popColorMatrix();
+        canvas_2d.renderSprite(scaled_fb.colors(), Vec3(0, 2, 0.0), Vec3(0.0, 0.0), Vec3(1.0, 1.0, 1.0), 0.0);
+        canvas_2d.renderSprite(fb2.bloom(), Vec3(0, 3, 0.0), Vec3(0.0, 0.0), Vec3(1.0, 1.0, 1.0), 0.0);
+      } canvas_2d.popModelViewMatrix();
+    } canvas_2d.popProjectionMatrix();
 
     renderer.swap();
     ASSERT_GL_ERROR;

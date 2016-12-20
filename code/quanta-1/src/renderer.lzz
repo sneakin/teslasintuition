@@ -1,11 +1,8 @@
 #hdr
 #include <map>
-#include "renderer/material.h"
 #include "renderer/texture.h"
 #include "renderer/camera.h"
 #include "renderer/uniform_matrix_stack.h"
-#include "renderer/square_mesh.h"
-#include "renderer/line_mesh.h"
 #include "renderer/gl3/framebuffer.h"
 #end
 
@@ -41,25 +38,16 @@ public:
 private:
   SDL_GLContext _gl_context;
   SDL_Window *_window;
-  GLuint _shader_in_position, _shader_in_color, _shader_in_texture, _shader_uniform_color, _shader_uniform_texture, _shader_in_time, _shader_uniform_light0_position, _shader_uniform_light0_intensity, _shader_uniform_light0_color, _shader_uniform_ambient_light, _shader_uniform_forward, _shader_uniform_camera, _shader_uniform_velocity;
-  GLuint _shader_uniform_material_shine, _shader_uniform_material_specular, _shader_uniform_material_diffuse, _shader_uniform_material_ambient, _shader_uniform_material_emission;
-  GLuint _shader_uniform_fps, _shader_uniform_target_fps, _shader_uniform_fragment;
-  SquareMesh *_quad;
-  LineMesh *_line;
-  UniformMatrixStack _modelview, _projection, _texture, _color;
-  Vec3 _uniform_color;
-  Material _material;
+  GLuint _shader_uniform_time;
+  GLuint _shader_uniform_fps, _shader_uniform_target_fps;
   Texture *_default_texture;
-  GLuint _fragment;
   Real _last_frame_time, _target_fps;
 
   static GL3::Framebuffer DefaultFramebuffer = GL3::Framebuffer(0);
   
 public:
-  static const Material AxisMaterial = Material(Colors::Clear, Colors::Clear, 0.0, Colors::White, Colors::White);
-  
   Renderer(SDL_Window *window)
-    : _window(window), _uniform_color(Colors::White), _target_fps(60.0)
+    : _window(window), _target_fps(60.0)
   {
     //SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
@@ -83,20 +71,13 @@ public:
 
     ASSERT_GL_ERROR;
 
-    _quad = new SquareMesh(*this);
-    _line = new LineMesh(*this);
     _default_texture = new Texture();
     
-    bindMaterial(GL_FRONT_AND_BACK, Material::Default);
-    resetFragmentId();
     _last_frame_time = currentTime();
-    updateFPS();
   }
 
   virtual ~Renderer()
   {
-    delete _quad;
-    delete _line;
     delete _default_texture;
     
     SDL_GL_DeleteContext(_gl_context);
@@ -106,7 +87,6 @@ public:
   {
     SDL_GL_SwapWindow(_window);
     ASSERT_GL_ERROR;
-    resetFragmentId();
     updateFPS();
   }
 
@@ -140,26 +120,6 @@ public:
     }
   }
 
-  void bindMaterial(GLenum face, const Material &m)
-  {
-    if(face == GL_FRONT_AND_BACK) {
-      bindMaterial(GL_FRONT, m);
-      bindMaterial(GL_BACK, m);
-    } else {
-      _material = m; // TODO detect if useProgram was called
-      glUniform1r(_shader_uniform_material_shine, m.shininess());
-      glUniform4rv(_shader_uniform_material_specular, 1, m.specular());
-      glUniform4rv(_shader_uniform_material_emission, 1, m.emission());
-      glUniform4rv(_shader_uniform_material_ambient, 1, m.ambient());
-      glUniform4rv(_shader_uniform_material_diffuse, 1, m.diffuse());
-    }
-  }
-
-  void unbindMaterial(GLenum face)
-  {
-    bindMaterial(face, Material::Default);
-  }
-
   void unbindTexture()
   {
     _default_texture->bind();
@@ -169,88 +129,23 @@ public:
   {
     glUseProgram(prog_id);
     bindUniforms(prog_id);
-    setColor(_uniform_color);
-    setSamplers(prog_id);
-    bindMaterial(GL_FRONT_AND_BACK, _material);
-  }
-
-  void setSamplers(GLuint prog_id)
-  {
-    _shader_uniform_texture = glGetUniformLocation(prog_id, "tex");
-    glUniform1i(_shader_uniform_texture, 0);
-
-    GLuint loc = glGetUniformLocation(prog_id, "depth");
-    glUniform1i(loc, 1);
-
-    loc = glGetUniformLocation(prog_id, "velocity");
-    glUniform1i(loc, 2);
-
-    loc = glGetUniformLocation(prog_id, "bloom");
-    glUniform1i(loc, 3);
-
-    loc = glGetUniformLocation(prog_id, "fragment_data");
-    glUniform1i(loc, 4);
-
-    loc = glGetUniformLocation(prog_id, "last_frame");
-    glUniform1i(loc, 5);
+    ASSERT_GL_ERROR;
   }
 
   void bindUniforms(GLuint prog_id)
   {
-    _shader_in_position = glGetAttribLocation(prog_id, "inPosition");
-    _shader_in_color = glGetAttribLocation(prog_id, "inColor");
-    _shader_in_texture = glGetAttribLocation(prog_id, "inTexture");
-    _shader_in_time = glGetAttribLocation(prog_id, "inTime");
-
-    _shader_uniform_color = glGetUniformLocation(prog_id, "uColor");
-    _shader_uniform_velocity = glGetUniformLocation(prog_id, "uVelocity");
-    
-    _shader_uniform_light0_position = glGetUniformLocation(prog_id, "uLight.position");
-    _shader_uniform_light0_intensity = glGetUniformLocation(prog_id, "uLight.intensity");
-    _shader_uniform_light0_color = glGetUniformLocation(prog_id, "uLight.color");
-    _shader_uniform_ambient_light = glGetUniformLocation(prog_id, "uAmbientLight");
-    _shader_uniform_forward = glGetUniformLocation(prog_id, "uForward");
-    _shader_uniform_camera = glGetUniformLocation(prog_id, "uCamera");
-
-    _shader_uniform_material_shine = glGetUniformLocation(prog_id, "uMaterial.shine");
-    _shader_uniform_material_specular = glGetUniformLocation(prog_id, "uMaterial.specular");
-    _shader_uniform_material_diffuse = glGetUniformLocation(prog_id, "uMaterial.diffuse");
-    _shader_uniform_material_ambient = glGetUniformLocation(prog_id, "uMaterial.ambient");
-    _shader_uniform_material_emission = glGetUniformLocation(prog_id, "uMaterial.emission");
-
-    _modelview.setLocation(glGetUniformLocation(prog_id, "mModelView"));
-    _projection.setLocation(glGetUniformLocation(prog_id, "mProjection"));
-    _texture.setLocation(glGetUniformLocation(prog_id, "mTexture"));
-    _color.setLocation(glGetUniformLocation(prog_id, "mColor"));
-
-    _shader_uniform_fragment = glGetUniformLocation(prog_id, "uFragmentId");
-    resetFragmentId();
-
+    _shader_uniform_time = glGetAttribLocation(prog_id, "uTime");
     _shader_uniform_fps = glGetUniformLocation(prog_id, "uFPS");
     _shader_uniform_target_fps = glGetUniformLocation(prog_id, "uTargetFPS");
+
     updateFPS();
     
     ASSERT_GL_ERROR;
   }
 
-  GLuint shaderInPositionAttrib() const
-  {
-    return _shader_in_position;
-  }
-
-  GLuint shaderInColorAttrib() const
-  {
-    return _shader_in_color;
-  }
-
-  GLuint shaderInTextureAttrib() const
-  {
-    return _shader_in_texture;
-  }
-
   void updateTime(GLuint t)
   {
-    glUniform1i(_shader_in_time, t);
+    glUniform1i(_shader_uniform_time, t);
   }
 
   GL3::Framebuffer &defaultFramebuffer()
@@ -258,225 +153,11 @@ public:
     return DefaultFramebuffer;
   }
 
-  void pushProjectionMatrix()
-  {
-    _projection.push();
-  }
-
-  void popProjectionMatrix()
-  {
-    _projection.pop();
-  }
-  
-  void setProjectionMatrix(const Matrix &m)
-  {
-    _projection.load(m);
-  }
-
-  void mulProjectionMatrix(const Matrix &m)
-  {
-    _projection.mul(m);
-  }
-
-  void setModelViewMatrix(const Matrix &m)
-  {
-    _modelview.load(m);
-  }
-
-  void mulModelViewMatrix(const Matrix &m)
-  {
-    _modelview.mul(m);
-  }
-
-  void pushModelViewMatrix()
-  {
-    _modelview.push();
-  }
-
-  void popModelViewMatrix()
-  {
-    _modelview.pop();
-  }
-
-  void setTextureMatrix(const Matrix &m)
-  {
-    _texture.load(m);
-  }
-
-  void setColor(const Vec3 &c)
-  {
-    _uniform_color = c;
-    glUniform4rv(_shader_uniform_color, 1, c);
-    ASSERT_GL_ERROR;
-  }
-
-  Matrix colorMatrix() const
-  {
-    return _color.top();
-  }
-  
-  void setColorMatrix(const Matrix &m)
-  {
-    _color.load(m);
-  }
-
-  void pushColorMatrix()
-  {
-    _color.push();
-  }
-
-  void popColorMatrix()
-  {
-    _color.pop();
-  }
-
-  void mulColorMatrix(const Matrix &m)
-  {
-    _color.mul(m);
-  }
-
-  void setCamera(const Camera &camera)
-  {
-    glUniform3rv(_shader_uniform_forward, 1, camera.forward());
-    glUniform3rv(_shader_uniform_camera, 1, camera.position());
-    setModelViewMatrix(camera.matrix().invert());
-  }
-  
-  void renderSprite(const Texture &tex, const Vec3 &position, const Vec3 &origin, const Vec3 &size, const Real &angle)
-  {
-    _modelview.push();
-    _modelview.mul(Matrix::translation(-origin) * Matrix::scale(size) * Matrix::rotateZ(angle) * Matrix::translation(position));
-    tex.bind(0);
-    ASSERT_GL_ERROR;
-    _quad->bind();
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    ASSERT_GL_ERROR;
-    _quad->unbind();
-    _modelview.pop();
-    tex.unbind();
-  }
-
- void renderCameraAxis(const Camera &camera)
-  {
-    renderAxis(camera.position(), camera.right(), camera.up());
-    pushColorMatrix(); {
-      mulColorMatrix(Matrix::rotate(Vec3(M_PI / 4.0, M_PI / 4.0, M_PI / 4.0)));
-      renderAxis(camera.position(), Vec3::X, Vec3::Y);
-    } popColorMatrix();
-  }
-
-  void renderOriginAxis()
-  {
-    bindMaterial(GL_FRONT_AND_BACK, AxisMaterial);
-    renderVector(Vec3(), Vec3::X, Colors::Red);
-    renderVector(Vec3(), Vec3::Y, Colors::Green);
-    renderVector(Vec3(), Vec3::Z, Colors::Blue);
-    unbindMaterial(GL_FRONT_AND_BACK);
-  }
-
-  void renderAxis(const Vec3 &origin, const Vec3 &right = Vec3::X, const Vec3 &up = Vec3::Y)
-  {
-    pushModelViewMatrix(); {
-      mulModelViewMatrix(Matrix::lookAt(up.cross(right), up) * Matrix::translation(origin));
-      renderOriginAxis();
-    } popModelViewMatrix();
-  }
-
-  void renderVector(const Vec3 &origin, const Vec3 &v, const Vec3 &color = Colors::White)
-  {
-    ASSERT_GL_ERROR;
-    glLineWidth(4.0);
-    glPointSize(10.0);
-    ASSERT_GL_ERROR;
-    setColor(color);
-    pushModelViewMatrix(); {
-      mulModelViewMatrix(Matrix::scale(v * Vec3(1.0, 1.0, 1.0, 0.0) + Vec3::W) * Matrix::translation(origin));
-      _line->bind();
-      glDrawArrays(GL_LINES, 0, 2);
-      _line->unbind();
-    } popModelViewMatrix();
-    ASSERT_GL_ERROR;
-  }
-
-  void renderNormal(const Vec3 &origin, const Vec3 &normal, const Vec3 &color = Colors::Green)
-  {
-    bindMaterial(GL_FRONT_AND_BACK, AxisMaterial);
-    renderVector(origin, normal * 512.0, color);
-  }
-
-  void renderPole(const Camera &cam, const Vec3 &position, Real value, const Vec3 &color)
-  {
-    bindMaterial(GL_FRONT_AND_BACK, AxisMaterial);
-    renderVector(position, Vec3(0, 1, 0) * value, color);
-  }
-
-  void renderPoint(const Vec3 &position, const Vec3 &color = Colors::White, Real diameter = 1.0)
-  {
-    ASSERT_GL_ERROR;
-    glPointSize(clamp<Real>(diameter, 10.0));
-    setColor(color);
-    pushModelViewMatrix(); {
-      mulModelViewMatrix(Matrix::translation(position));
-      _line->bind();
-      glDrawArrays(GL_POINTS, 0, 1);
-      _line->unbind();
-    } popModelViewMatrix();
-    ASSERT_GL_ERROR;
-  }
-
-  void renderLine(const Vec3 &a, const Vec3 &b, const Vec3 &color = Colors::White)
-  {
-    renderVector(a, b - a, color);
-  }
-
   void setViewport(int top, int left, int width, int height)
   {
     glViewport(top, left, width, height);
   }
   
-  uint32_t createPointLight(const Vec3 &position, Real attenuation, const Vec3 &color)
-  {
-    moveLight(0, position);
-    glUniform1r(_shader_uniform_light0_intensity, attenuation);
-    ASSERT_GL_ERROR;
-    glUniform3rv(_shader_uniform_light0_color, 1, color);
-    ASSERT_GL_ERROR;
-    return 0;
-  }
-
-  void setAmbientLight(const Vec3 &color)
-  {
-    glUniform3rv(_shader_uniform_ambient_light, 1, color);
-    ASSERT_GL_ERROR;
-  }
-
-  void moveLight(uint32_t id, const Vec3 &position)
-  {
-    glUniform4rv(_shader_uniform_light0_position, 1, _modelview.top() * position);
-    ASSERT_GL_ERROR;
-  }
-
-  void setVelocity(const Vec3 &v)
-  {
-    //glUniform3rv(_shader_uniform_velocity, 1, _modelview.top() * v);
-    // TODO: is the W component screwing velocity?
-    glUniform3rv(_shader_uniform_velocity, 1, _modelview.top() * (v * Vec3(1.0, 1.0, 1.0, 0.0)));
-    ASSERT_GL_ERROR;
-    updateFragmentId();
-  }
-
-  void updateFragmentId()
-  {
-    glUniform1i(_shader_uniform_fragment, _fragment++);
-    ASSERT_GL_ERROR;
-  }
-
-  void resetFragmentId()
-  {
-    _fragment = 0;
-    updateFragmentId();
-  }
-
   Real currentTime() const { return SDL_GetTicks() / 1000.0; }
 
   void updateFPS()
@@ -486,7 +167,7 @@ public:
     if(fps == INFINITY) fps = _target_fps;
     _last_frame_time = now;
     glUniform1r(_shader_uniform_fps, fps);
-    glUniform1r(_shader_uniform_fps, _target_fps);
+    glUniform1r(_shader_uniform_target_fps, _target_fps);
     ASSERT_GL_ERROR;
   }
 };

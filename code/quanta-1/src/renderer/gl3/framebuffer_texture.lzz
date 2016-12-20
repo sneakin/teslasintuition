@@ -25,10 +25,11 @@ namespace GL3
         _mydepth(width, height, GL_RGBA, false, false, GL_RGB, GL_UNSIGNED_BYTE),
         _stencil(GL_DEPTH_STENCIL, width, height)
     {
+      // fixme GL error in here somewhere
       _fb.attachTexture(GL_COLOR_ATTACHMENT0, _colors);
       _fb.attachTexture(GL_COLOR_ATTACHMENT1, _velocity);
       _fb.attachTexture(GL_COLOR_ATTACHMENT2, _bloom);
-      _fb.attachRenderbuffer(GL_DEPTH_STENCIL_ATTACHMENT, _stencil); // stencil?
+      //_fb.attachRenderbuffer(GL_DEPTH_STENCIL_ATTACHMENT, _stencil); // stencil?
       _fb.attachTexture(GL_DEPTH_ATTACHMENT, _depth);
       _fb.attachTexture(GL_COLOR_ATTACHMENT3, _mydepth);
       GLenum buffers1[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };

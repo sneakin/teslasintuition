@@ -41,6 +41,7 @@ quanta_SRC = math-fun.lzz \
 	vertex_array.lzz \
 	array_buffer.lzz \
 	index_buffer.lzz \
+	canvas.lzz \
 	effects/downsampler.lzz \
 	effects/base_blur.lzz \
 	effects/horizontal_blur.lzz \

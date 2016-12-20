@@ -3,9 +3,12 @@
 #include "colors.h"
 #include "array_buffer.h"
 #include "vertex_array.h"
+
+class Canvas;
 #end
 
 #src
+#include "canvas.h"
 #end
 
 class LineMesh
@@ -14,25 +17,25 @@ class LineMesh
   VertexArray _varray;
   
 public:
-  LineMesh(Renderer &renderer)
-    : _verts(renderer), _colors(renderer), _normals(renderer), _varray(renderer)
+  LineMesh(Canvas &canvas)
+    : _verts(canvas.renderer()), _colors(canvas.renderer()), _normals(canvas.renderer()), _varray(canvas.renderer())
   {
-    setupBuffers();
+    setupBuffers(canvas);
   }
 
-  void setupBuffers()
+  void setupBuffers(Canvas &canvas)
   {
     _varray.bind();
     Vec3 verts[2] = { Vec3(0.0, 0.0, 0.0), Vec3(1.0, 1.0, 1.0) };
     _verts.update(verts, 2);
-    _varray.enableAttribute(0, 4, GL_REAL, GL_FALSE, 0, 0);
-    _varray.enableAttribute(3, 4, GL_REAL, GL_FALSE, 0, 0);
+    _varray.enableAttribute(canvas.positionAttribute(), 4, GL_REAL, GL_FALSE, 0, 0);
+    _varray.enableAttribute(canvas.textureCoordAttribute(), 4, GL_REAL, GL_FALSE, 0, 0);
     Vec3 colors[2] = { Colors::White, Colors::White };
     _colors.update(verts, 2);
-    _varray.enableAttribute(1, 4, GL_REAL, GL_FALSE, 0, 0);
+    _varray.enableAttribute(canvas.colorAttribute(), 4, GL_REAL, GL_FALSE, 0, 0);
     Vec3 normals[2] = { Vec3::Z, Vec3::Z };
     _normals.update(normals, 2);
-    _varray.enableAttribute(2, 4, GL_REAL, GL_FALSE, 0, 0);
+    _varray.enableAttribute(canvas.normalAttribute(), 4, GL_REAL, GL_FALSE, 0, 0);
     _varray.unbind();
   }
 

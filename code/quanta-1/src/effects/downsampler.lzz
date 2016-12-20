@@ -1,5 +1,5 @@
 #hdr
-#include "renderer.h"
+#include "canvas.h"
 #include "vertex_shader.h"
 #include "fragment_shader.h"
 #include "shader_program.h"
@@ -8,14 +8,20 @@
 class DownSampler
 {
   Renderer &_renderer;
+  Canvas2D &_canvas;
   ShaderProgram _shader;
   VertexShader _vertex_shader;
   FragmentShader _fragment;
   int _samples;
 
 public:
-  DownSampler(Renderer &r, int samples = 4)
-    : _renderer(r), _shader(r), _vertex_shader("shaders/basic_vertex.glsl"), _fragment("shaders/basic_fragment.glsl"), _samples(samples)
+  DownSampler(Canvas2D &canvas, int samples = 4)
+    : _renderer(canvas.renderer()),
+      _canvas(canvas),
+      _shader(canvas.renderer()),
+      _vertex_shader("shaders/basic_vertex.glsl"),
+      _fragment("shaders/basic_fragment.glsl"),
+      _samples(samples)
   {
     _shader.attach(_vertex_shader);
     _shader.attach(_fragment);
@@ -27,28 +33,27 @@ public:
 
   void render(Texture &colors)
   {
-    _shader.bind();
+    _canvas.bind(_shader);
     bindUniforms();
 
     _renderer.clear();
-    _renderer.pushModelViewMatrix(); {
-      _renderer.setModelViewMatrix(Matrix::identity());
-      _renderer.pushProjectionMatrix(); {
-        _renderer.setProjectionMatrix(Matrix::orthographicProjection(0.0, 0.0, 1.0, 1.0, 100.0, -100.0));
-        _renderer.setVelocity(Vec3());
-        _renderer.setColor(Colors::White);
+    _canvas.pushModelViewMatrix(); {
+      _canvas.setModelViewMatrix(Matrix::identity());
+      _canvas.pushProjectionMatrix(); {
+        _canvas.setProjectionMatrix(Matrix::orthographicProjection(0.0, 0.0, 1.0, 1.0, 100.0, -100.0));
+        _canvas.setVelocity(Vec3());
+        _canvas.setColor(Colors::White);
         for(int s = 0; s < _samples; s++ ) {
           Real scale = pow(0.5, s);
-          _renderer.renderSprite(colors, Vec3(1.0 - scale, 0, -100), Vec3(0, 0), Vec3(scale * 0.5, scale * 0.5, 1.0), 0);
+          _canvas.renderSprite(colors, Vec3(1.0 - scale, 0, -100), Vec3(0, 0), Vec3(scale * 0.5, scale * 0.5, 1.0), 0);
           //_renderer.renderSprite(colors, Vec3(1.0 - scale, 0, -100), Vec3(0, 0), Vec3(scale * 0.5, scale * 0.5, 1.0), 0);
         }
-      } _renderer.popProjectionMatrix();
-    } _renderer.popModelViewMatrix();
+      } _canvas.popProjectionMatrix();
+    } _canvas.popModelViewMatrix();
   }
 
   void bindUniforms()
   {
-    GLuint loc = glGetUniformLocation(_shader.id(), "inColors");
-    glUniform1i(loc, 0);
+    _shader.setUniformi("inColors", 0);
   }
 };

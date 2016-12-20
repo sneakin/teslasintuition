@@ -15,10 +15,15 @@ class BloomShader
   ShaderProgram _shader;
   VertexShader _vertex_shader;
   FragmentShader _fragment;
+  Canvas2D &_canvas;
 
 public:
-  BloomShader(Renderer &r)
-    : _renderer(r), _shader(r), _vertex_shader("shaders/basic_vertex.glsl"), _fragment("shaders/bloom.glsl")
+  BloomShader(Canvas2D &canvas)
+    : _renderer(canvas.renderer()),
+      _shader(canvas.renderer()),
+      _vertex_shader("shaders/basic_vertex.glsl"),
+      _fragment("shaders/bloom.glsl"),
+      _canvas(canvas)
   {
     _shader.attach(_vertex_shader);
     _shader.attach(_fragment);
@@ -28,42 +33,32 @@ public:
 
   void render(Texture &colors, Texture &bloom, Texture &downsamples, int num_samples, float brightness = 1.0)
   {
-    _shader.bind();
+    _canvas.bind(_shader);
     bindUniforms(num_samples, brightness);
 
     _renderer.clear();
-    _renderer.pushModelViewMatrix(); {
-      _renderer.setModelViewMatrix(Matrix::identity());
-      _renderer.pushProjectionMatrix(); {
-        _renderer.setProjectionMatrix(Matrix::orthographicProjection(-1.0, -1.0, 1.0, 1.0, 100.0, -100.0));
-        _renderer.setVelocity(Vec3());
-        _renderer.setColor(Colors::White);
+    _canvas.pushModelViewMatrix(); {
+      _canvas.setModelViewMatrix(Matrix::identity());
+      _canvas.pushProjectionMatrix(); {
+        _canvas.setProjectionMatrix(Matrix::orthographicProjection(-1.0, -1.0, 1.0, 1.0, 100.0, -100.0));
+        _canvas.setVelocity(Vec3());
+        _canvas.setColor(Colors::White);
         bloom.bind(1);
         downsamples.bind(2);
-        _renderer.renderSprite(colors, Vec3(-1, -1, -100), Vec3(0, 0), Vec3(2.0, 2.0, 1.0), 0);
-      } _renderer.popProjectionMatrix();
-    } _renderer.popModelViewMatrix();
+        _canvas.renderSprite(colors, Vec3(-1, -1, -100), Vec3(0, 0), Vec3(2.0, 2.0, 1.0), 0);
+      } _canvas.popProjectionMatrix();
+    } _canvas.popModelViewMatrix();
 
     ASSERT_GL_ERROR;
   }
 
   void bindUniforms(int num_samples, float brightness)
   {
-    GLuint loc = glGetUniformLocation(_shader.id(), "inColors");
-    glUniform1i(loc, 0);
-
-    loc = glGetUniformLocation(_shader.id(), "inBloom");
-    glUniform1i(loc, 1);
-
-    loc = glGetUniformLocation(_shader.id(), "inBloomSamples");
-    glUniform1i(loc, 2);
-
-    loc = glGetUniformLocation(_shader.id(), "inBloomNumSamples");
-    glUniform1i(loc, num_samples);
-
-    loc = glGetUniformLocation(_shader.id(), "inBloomBrightness");
-    glUniform1r(loc, brightness);
-
+    _shader.setUniformi("inColors", 0);
+    _shader.setUniformi("inBloom", 1);
+    _shader.setUniformi("inBloomSamples", 2);
+    _shader.setUniformi("inBloomNumSamples", num_samples);
+    _shader.setUniformr("inBloomBrightness", brightness);
     ASSERT_GL_ERROR;
   }
 };
@@ -76,8 +71,12 @@ class Bloom
   GL3::FramebufferTexture &_scratch_fb, &_scaled_fb;
   
 public:
-  Bloom(Renderer &r, int samples, int blur_size, GL3::FramebufferTexture &scratch_fb, GL3::FramebufferTexture &scaled_fb)
-    : _shader(r), _blur(r, blur_size, scratch_fb), _downsampler(r, samples), _scratch_fb(scratch_fb), _scaled_fb(scaled_fb)
+  Bloom(Canvas2D &canvas, int samples, int blur_size, GL3::FramebufferTexture &scratch_fb, GL3::FramebufferTexture &scaled_fb)
+    : _shader(canvas),
+      _blur(canvas, blur_size, scratch_fb),
+      _downsampler(canvas, samples),
+      _scratch_fb(scratch_fb),
+      _scaled_fb(scaled_fb)
   {
   }
 

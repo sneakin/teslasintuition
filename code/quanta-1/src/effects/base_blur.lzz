@@ -1,5 +1,5 @@
 #hdr
-#include "renderer.h"
+#include "canvas.h"
 #include "vertex_shader.h"
 #include "fragment_shader.h"
 #include "shader_program.h"
@@ -8,6 +8,7 @@
 class BaseBlur
 {
   Renderer &_renderer;
+  Canvas2D &_canvas;
   ShaderProgram _shader;
   VertexShader _vertex_shader;
   FragmentShader _fragment;
@@ -15,8 +16,14 @@ class BaseBlur
   float *_filter;
 
 public:
-  BaseBlur(Renderer &r, const char *blur_shader_path, int size)
-    : _renderer(r), _shader(r), _vertex_shader("shaders/basic_vertex.glsl"), _fragment(blur_shader_path), _size(0), _filter(NULL)
+  BaseBlur(Canvas2D &canvas, const char *blur_shader_path, int size)
+    : _renderer(canvas.renderer()),
+      _canvas(canvas),
+      _shader(canvas.renderer()),
+      _vertex_shader("shaders/basic_vertex.glsl"),
+      _fragment(blur_shader_path),
+      _size(0),
+      _filter(NULL)
   {
     _shader.attach(_vertex_shader);
     _shader.attach(_fragment);
@@ -61,34 +68,27 @@ public:
   
   void render(Texture &colors)
   {
-    _shader.bind();
+    _canvas.bind(_shader);
     bindUniforms();
 
     _renderer.clear();
-    _renderer.pushModelViewMatrix(); {
-      _renderer.setModelViewMatrix(Matrix::identity());
-      _renderer.pushProjectionMatrix(); {
-        _renderer.setProjectionMatrix(Matrix::orthographicProjection(-1.0, -1.0, 1.0, 1.0, 100.0, -100.0));
-        _renderer.setVelocity(Vec3());
-        _renderer.setColor(Colors::White);
-        _renderer.renderSprite(colors, Vec3(-1, -1, -100), Vec3(0, 0), Vec3(2.0, 2.0, 1.0), 0);
-      } _renderer.popProjectionMatrix();
-    } _renderer.popModelViewMatrix();
+    _canvas.pushModelViewMatrix(); {
+      _canvas.setModelViewMatrix(Matrix::identity());
+      _canvas.pushProjectionMatrix(); {
+        _canvas.setProjectionMatrix(Matrix::orthographicProjection(-1.0, -1.0, 1.0, 1.0, 100.0, -100.0));
+        _canvas.setVelocity(Vec3());
+        _canvas.setColor(Colors::White);
+        _canvas.renderSprite(colors, Vec3(-1, -1, -100), Vec3(0, 0), Vec3(2.0, 2.0, 1.0), 0);
+      } _canvas.popProjectionMatrix();
+    } _canvas.popModelViewMatrix();
 
     ASSERT_GL_ERROR;
   }
 
   virtual void bindUniforms()
   {
-    GLuint loc = glGetUniformLocation(_shader.id(), "inColors");
-    glUniform1i(loc, 0);
-
-    loc = glGetUniformLocation(_shader.id(), "inBlurSize");
-    glUniform1i(loc, _size);
-
-    loc = glGetUniformLocation(_shader.id(), "inBlurFilter");
-    glUniform1fv(loc, _size, _filter);
-
-    ASSERT_GL_ERROR;
+    _shader.setUniformi("inColors", 0);
+    _shader.setUniformi("inBlurSize", _size);
+    _shader.setUniformfv("inBlurFilter", _size, _filter);
   }
 };
