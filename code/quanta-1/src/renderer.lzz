@@ -4,6 +4,8 @@
 #include "renderer/camera.h"
 #include "renderer/uniform_matrix_stack.h"
 #include "renderer/gl3/framebuffer.h"
+
+class Window;
 #end
 
 #src
@@ -11,6 +13,7 @@
 #include "gl.h"
 #include "real.h"
 #include "math-fun.h"
+#include "sdl.h"
 #include <assert.h>
 #end
 
@@ -37,7 +40,7 @@ public:
 
 private:
   SDL_GLContext _gl_context;
-  SDL_Window *_window;
+  Window &_window;
   GLuint _shader_uniform_time;
   GLuint _shader_uniform_fps, _shader_uniform_target_fps;
   Texture *_default_texture;
@@ -46,7 +49,7 @@ private:
   static GL3::Framebuffer DefaultFramebuffer = GL3::Framebuffer(0);
   
 public:
-  Renderer(SDL_Window *window)
+  Renderer(Window &window)
     : _window(window), _target_fps(60.0)
   {
     //SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
@@ -58,7 +61,7 @@ public:
     //SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
 
-    _gl_context = SDL_GL_CreateContext(_window);
+    _gl_context = SDL_GL_CreateContext(_window.internalWindow());
     if(!_gl_context) {
       throw RendererError("OpenGL context", SDL_GetError());
     }
@@ -85,7 +88,7 @@ public:
 
   void swap()
   {
-    SDL_GL_SwapWindow(_window);
+    SDL_GL_SwapWindow(_window.internalWindow());
     ASSERT_GL_ERROR;
     updateFPS();
   }

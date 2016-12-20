@@ -8,6 +8,7 @@ quanta_SRC = math-fun.lzz \
 	index_out_of_bounds_error.lzz \
 	matrix.lzz \
 	colors.lzz \
+  sdl.lzz \
 	renderer/material.lzz \
 	renderer/texture.lzz \
 	renderer/textured_material.lzz \
@@ -19,7 +20,7 @@ quanta_SRC = math-fun.lzz \
 	renderer/line_mesh.lzz \
 	renderer/gl3/framebuffer.lzz \
 	renderer/gl3/renderbuffer.lzz \
-        renderer/gl3/framebuffer_texture.lzz \
+	renderer/gl3/framebuffer_texture.lzz \
 	image.lzz \
 	renderer.lzz \
 	geometry/triangle.lzz \

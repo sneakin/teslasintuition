@@ -8,7 +8,7 @@
 #include <string>
 #include <cmath>
 #include "gl.h"
-#include <SDL2/SDL.h>
+#include "sdl.h"
 
 #include "real.h"
 #include "vec3.h"
@@ -86,20 +86,13 @@ int main(int argc, char *argv[])
     quantum_mass = ator(argv[6]);
   }
 
-  if(SDL_Init(SDL_INIT_VIDEO|SDL_INIT_JOYSTICK) != 0) {
-    cout << "SDL Init Error: " << SDL_GetError() << endl;
-    return -1;
-  }
+  SDL sdl(SDL_INIT_VIDEO|SDL_INIT_JOYSTICK);
 
-  int num_displays = SDL_GetNumVideoDisplays();
+  int num_displays = sdl.numberOfDisplays();
   int display = 1;
   cout << "Using display " << display << "/" << num_displays << endl;
 
-  SDL_Window *window = SDL_CreateWindow(APP_TITLE, SDL_WINDOWPOS_CENTERED_DISPLAY(display), SDL_WINDOWPOS_CENTERED_DISPLAY(display), APP_WIDTH, APP_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-  if(window == NULL) {
-    cout << "Error creating window: " << SDL_GetError() << endl;
-    return -1;
-  }
+  Window window(sdl, APP_TITLE, SDL_WINDOWPOS_CENTERED_DISPLAY(display), SDL_WINDOWPOS_CENTERED_DISPLAY(display), APP_WIDTH, APP_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
   Renderer renderer(window);
   if(GLEW_VERSION_3_2) {
@@ -802,9 +795,6 @@ int main(int argc, char *argv[])
     frames++;
     ms_per_frame = SDL_GetTicks() - frame_start;
   }
-
-  SDL_DestroyWindow(window);
-  SDL_Quit();
 
   return 0;
 }

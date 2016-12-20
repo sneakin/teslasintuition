@@ -1,0 +1,62 @@
+#hdr
+#include <SDL2/SDL.h>
+#include <string>
+#end
+
+class SDLError
+{
+  std::string _file, _message;
+  int _line;
+  
+public:
+  SDLError(const char *file, int line)
+    : _file(file), _line(line), _message(SDL_GetError())
+  {
+  }
+};
+
+#src
+#define SDL_ERROR SDLError(__FILE__, __LINE__)
+#end
+
+class SDL
+{
+public:
+  SDL(uint32_t flags)
+  {
+    if(SDL_Init(flags)) {
+      throw SDL_ERROR;
+    }
+  }
+
+  ~SDL()
+  {
+    SDL_Quit();
+  }
+
+  int numberOfDisplays() const
+  {
+    return SDL_GetNumVideoDisplays();
+  }
+};
+
+class Window
+{
+  SDL_Window *_window;
+  
+public:
+  Window(SDL &sdl, const char *title, int left, int top, int width, int height, uint32_t flags)
+  {
+    _window = SDL_CreateWindow(title, left, top, width, height, flags);
+    if(_window == NULL) {
+      throw SDL_ERROR;
+    }
+  }
+
+  ~Window()
+  {
+    SDL_DestroyWindow(_window);
+  }
+
+  SDL_Window *internalWindow() { return _window; }
+};
