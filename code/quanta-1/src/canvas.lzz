@@ -1,40 +1,21 @@
 #hdr
 #include "renderer.h"
-#include "vertex_shader.h"
-#include "fragment_shader.h"
-#include "shader_program.h"
 #include "renderer/uniform_matrix_stack.h"
 #include "renderer/material.h"
 
 class SquareMesh;
 class LineMesh;
+class FramebufferTexture;
+
+#include "shader_unit.h"
 #end
 
 #src
 #include "renderer/square_mesh.h"
 #include "renderer/line_mesh.h"
+#include "canvas/framebuffer_texture.h"
 #end
 
-class StockShaderProgram: public ShaderProgram
-{
-  VertexShader _vertex;
-  FragmentShader _fragment;
-  
-public:
-  StockShaderProgram(Renderer &renderer, const char *vertex_shader, const char *fragment_shader)
-    : ShaderProgram(renderer),
-      _vertex(vertex_shader),
-      _fragment(fragment_shader)
-  {
-    attach(_vertex);
-    attach(_fragment);
-    bind_data(0, "outColor");
-    bind_data(1, "outVelocity");
-    bind_data(2, "outBloom");
-    bind_data(3, "outDepth");
-    relink();
-  }
-};
 
 class Canvas
 {
@@ -63,11 +44,31 @@ public:
 
   Renderer &renderer() { return _renderer; }
 
-  virtual void bind(ShaderProgram &shader)
+  void clear() { _renderer.clear(); }
+  void flush() { _renderer.flush(); }
+
+  void setViewport(int top, int left, int w, int h)
+  {
+    _renderer.setViewport(top, left, w, h);
+  }
+
+  void bindFramebuffer(FramebufferTexture &fb, bool set_viewport = true)
+  {
+    bindFramebuffer(fb.framebuffer());
+  }
+  
+  void bindFramebuffer(GL3::Framebuffer &fb, bool set_viewport = true)
+  {
+    fb.bind();
+    if(set_viewport) {
+      setViewport(0, 0, fb.width(), fb.height());
+    }
+  }
+
+  virtual void bind(ShaderUnit &shader)
   {
     shader.bind();
-    updateUniforms(shader);
-    updateSamplers(shader);
+    updateUniforms(shader.shader());
   }
 
   void updateUniforms(ShaderProgram &shader)
@@ -85,16 +86,16 @@ public:
 
     _shader_uniform_velocity = shader.uniformLocation("uVelocity");
     setVelocity(_uniform_velocity);
+
+    // fragment shader inputs : texture unit mapping
+    shader.setUniformi("tex", 0);
   }
 
-  void updateSamplers(ShaderProgram &shader)
-  {
-    shader.setUniformi("tex", 0);
-    shader.setUniformi("depth", 1);
-    shader.setUniformi("velocity", 2);
-    shader.setUniformi("bloom", 3);
-    shader.setUniformi("fragment_data", 4);
-  }
+  // vertex shader inputs
+  GLuint positionAttribute() const { return 0; }
+  GLuint colorAttribute() const { return 1; }
+  GLuint normalAttribute() const { return 2; }
+  GLuint textureCoordAttribute() const { return 3; }
 
   void setColor(const Vec3 &c)
   {
@@ -145,9 +146,29 @@ public:
     _modelview.pop();
   }
 
+  Matrix textureMatrix() const
+  {
+    return _texture.top();
+  }
+  
   void setTextureMatrix(const Matrix &m)
   {
     _texture.load(m);
+  }
+
+  void pushTextureMatrix()
+  {
+    _texture.push();
+  }
+
+  void popTextureMatrix()
+  {
+    _texture.pop();
+  }
+
+  void mulTextureMatrix(const Matrix &m)
+  {
+    _texture.mul(m);
   }
 
   Matrix colorMatrix() const
@@ -197,16 +218,28 @@ public:
     updateFragmentId();
 }
 
-  GLuint positionAttribute() const { return 0; }
-  GLuint colorAttribute() const { return 1; }
-  GLuint normalAttribute() const { return 2; }
-  GLuint textureCoordAttribute() const { return 3; }
-
   void unbindTexture()
   {
     _renderer.unbindTexture();
   }
-    
+
+  void blit(const Texture &tex, const Vec3 &src_pos, const Vec3 &src_size, const Vec3 &dest_pos, const Vec3 &dest_size)
+  {
+    _modelview.push(); {
+      _texture.push(); {
+        _modelview.mul(Matrix::scale(dest_size) * Matrix::translation(dest_pos));
+        _texture.mul(Matrix::scale(src_size) * Matrix::translation(src_pos));
+        tex.bind(0);
+        ASSERT_GL_ERROR;
+        _quad->bind();
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        ASSERT_GL_ERROR;
+        _quad->unbind();
+        tex.unbind();
+      } _texture.pop();
+    } _modelview.pop();
+  }
+  
   void renderSprite(const Texture &tex, const Vec3 &position, const Vec3 &origin, const Vec3 &size, const Real &angle)
   {
     _modelview.push();
@@ -305,7 +338,7 @@ public:
   {
   }
 
-  virtual void bind(ShaderProgram &shader)
+  virtual void bind(ShaderUnit &shader)
   {
     Canvas::bind(shader);
 

@@ -48,8 +48,8 @@ smooth in vec3 Light0Position;
 
 out vec4 outColor;
 out vec4 outVelocity;
-out vec4 outDepth;
 out vec4 outBloom;
+out vec4 outDepth;
 
 vec4 powv(vec4 v, float e)
 {

@@ -59,4 +59,15 @@ public:
   }
 
   SDL_Window *internalWindow() { return _window; }
+
+  int width() const {
+    int w, h;
+    SDL_GetWindowSize(_window, &w, &h);
+    return w;
+  }
+  int height() const {
+    int w, h;
+    SDL_GetWindowSize(_window, &w, &h);
+    return h;
+  }
 };

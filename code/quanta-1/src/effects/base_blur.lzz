@@ -1,44 +1,47 @@
 #hdr
 #include "canvas.h"
-#include "vertex_shader.h"
-#include "fragment_shader.h"
-#include "shader_program.h"
+#include "shader_unit.h"
+#include "canvas/framebuffer_texture.h"
 #end
 
-class BaseBlur
+class BaseBlurShader: public ShaderUnit
 {
-  Renderer &_renderer;
-  Canvas2D &_canvas;
-  ShaderProgram _shader;
-  VertexShader _vertex_shader;
-  FragmentShader _fragment;
   int _size;
   float *_filter;
 
 public:
-  BaseBlur(Canvas2D &canvas, const char *blur_shader_path, int size)
-    : _renderer(canvas.renderer()),
-      _canvas(canvas),
-      _shader(canvas.renderer()),
-      _vertex_shader("shaders/basic_vertex.glsl"),
-      _fragment(blur_shader_path),
+  BaseBlurShader(Renderer &renderer, const char *fragment_path, int size)
+    : ShaderUnit(renderer, "shaders/basic_vertex.glsl", fragment_path, true),
       _size(0),
       _filter(NULL)
   {
-    _shader.attach(_vertex_shader);
-    _shader.attach(_fragment);
-    _shader.bind_data(0, "outColor");
-    _shader.relink();
+    setFilter(size);
+    relink();
+  }
 
+  virtual ~BaseBlurShader()
+  {
+    delete[] _filter;
+  }
+  
+  virtual void bindData(ShaderProgram &shader)
+  {
+    shader.bind_data(FramebufferTexture::COLORS, "outColor");
+  }
+
+  virtual void updateUniforms(ShaderProgram &shader)
+  {
+    shader.setUniformi("inColors", 0);
+    updateFilter();
+  }
+
+  void setFilter(int size)
+  {
     allocateFilter(size);
     computeFilter();
   }
 
-  virtual ~BaseBlur()
-  {
-    delete[] _filter;
-  }
-
+private:
   void allocateFilter(int size)
   {
     if(_filter) delete[] _filter;
@@ -66,12 +69,34 @@ public:
     }
   }
   
+  void updateFilter()
+  {
+    setUniformi("inBlurSize", _size);
+    setUniformfv("inBlurFilter", _size, _filter);
+  }
+};
+
+class BaseBlur
+{
+  Canvas2D &_canvas;
+  BaseBlurShader _shader;
+
+public:
+  BaseBlur(Canvas2D &canvas, const char *blur_shader_path, int size)
+    : _canvas(canvas),
+      _shader(canvas.renderer(), blur_shader_path, size)
+  {
+  }
+
+  virtual ~BaseBlur()
+  {
+  }
+
   void render(Texture &colors)
   {
     _canvas.bind(_shader);
-    bindUniforms();
 
-    _renderer.clear();
+    _canvas.clear();
     _canvas.pushModelViewMatrix(); {
       _canvas.setModelViewMatrix(Matrix::identity());
       _canvas.pushProjectionMatrix(); {
@@ -83,12 +108,5 @@ public:
     } _canvas.popModelViewMatrix();
 
     ASSERT_GL_ERROR;
-  }
-
-  virtual void bindUniforms()
-  {
-    _shader.setUniformi("inColors", 0);
-    _shader.setUniformi("inBlurSize", _size);
-    _shader.setUniformfv("inBlurFilter", _size, _filter);
   }
 };

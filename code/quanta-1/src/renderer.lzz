@@ -46,11 +46,11 @@ private:
   Texture *_default_texture;
   Real _last_frame_time, _target_fps;
 
-  static GL3::Framebuffer DefaultFramebuffer = GL3::Framebuffer(0);
+  GL3::Framebuffer _default_fb;
   
 public:
   Renderer(Window &window)
-    : _window(window), _target_fps(60.0)
+    : _window(window), _target_fps(60.0), _default_fb(0, window.width(), window.height())
   {
     //SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
@@ -91,6 +91,12 @@ public:
     SDL_GL_SwapWindow(_window.internalWindow());
     ASSERT_GL_ERROR;
     updateFPS();
+  }
+
+  void flush()
+  {
+    glFlush();
+    ASSERT_GL_ERROR;
   }
 
   void setClearColor(const Vec3 &c)
@@ -153,12 +159,18 @@ public:
 
   GL3::Framebuffer &defaultFramebuffer()
   {
-    return DefaultFramebuffer;
+    return _default_fb;
   }
 
   void setViewport(int top, int left, int width, int height)
   {
+    //std::cerr << "Viewport: " << top << " " << left << " " << width << " " << height << std::endl;
     glViewport(top, left, width, height);
+  }
+
+  void resize(int w, int h)
+  {
+    _default_fb.resize(w, h);
   }
   
   Real currentTime() const { return SDL_GetTicks() / 1000.0; }

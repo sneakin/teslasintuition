@@ -1,18 +1,18 @@
 #hdr
 #include "canvas.h"
+#include "canvas/framebuffer_texture.h"
 #include "effects/horizontal_blur.h"
 #include "effects/vertical_blur.h"
-#include "renderer/gl3/framebuffer_texture.h"
 #end
 
 class GaussianBlur
 {
   HorizontalBlur _horizontal;
   VerticalBlur _vertical;
-  GL3::FramebufferTexture &_scratch;
+  FramebufferTexture &_scratch;
   
 public:
-  GaussianBlur(Canvas2D &c, int size, GL3::FramebufferTexture &scratch)
+  GaussianBlur(Canvas2D &c, int size, FramebufferTexture &scratch)
     : _horizontal(c, size), _vertical(c, size), _scratch(scratch)
   {
   }

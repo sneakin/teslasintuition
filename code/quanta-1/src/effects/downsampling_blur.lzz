@@ -1,0 +1,71 @@
+#hdr
+#include "canvas.h"
+#include "canvas/framebuffer_texture.h"
+#include "effects/horizontal_blur.h"
+#include "effects/vertical_blur.h"
+#end
+
+class DownsamplingBlur
+{
+  Canvas2D &_canvas;
+  HorizontalBlurShader _horizontal;
+  VerticalBlurShader _vertical;
+  FramebufferTexture &_scratch;
+  int _samples;
+  
+public:
+  DownsamplingBlur(Canvas2D &c, int samples, int size, FramebufferTexture &scratch)
+    : _canvas(c),
+      _horizontal(c.renderer(), size),
+      _vertical(c.renderer(), size),
+      _scratch(scratch),
+      _samples(samples)
+  {
+  }
+
+  int numSamples() const { return _samples; }
+  
+  void render(FramebufferTexture &output, Texture &colors)
+  {
+    _canvas.pushModelViewMatrix(); {
+      _canvas.setModelViewMatrix(Matrix::identity());
+      _canvas.pushProjectionMatrix(); {
+        _canvas.setProjectionMatrix(Matrix::orthographicProjection(0.0, 0.0, 1.0, 1.0, -100.0, 100.0));
+        _canvas.setVelocity(Vec3());
+        _canvas.setColor(Colors::White);
+
+        // needs to do a full blur on the first sample, then using that
+        // blur the second sample, etc.
+        // bind 1st buffer and horiz shader, render sample from colors
+        _canvas.bindFramebuffer(_scratch);
+        _canvas.bind(_horizontal);
+        _canvas.clear();
+
+        float scale = 0.5;
+        float left = 0.0;
+        _canvas.blit(colors, Vec3(0.0, 0.0), Vec3(1.0, 1.0), Vec3(0.0, 0.0), Vec3(scale, scale));
+        
+        // bind 2nd buffer and vert shader, render sample from 1st buffer
+        _canvas.bindFramebuffer(output);
+        _canvas.bind(_vertical);
+        _canvas.clear();
+        _canvas.blit(_scratch.colors(), Vec3(0.0, 0.5), Vec3(0.5, 0.5), Vec3(0.0, 0.0), Vec3(scale, scale));
+
+        for(int sample = 1; sample < _samples; sample++) {
+          // bind 1st buffer and horiz shader, render sample from 1st sample
+          _canvas.bindFramebuffer(_scratch);
+          _canvas.bind(_horizontal);
+          _canvas.blit(output.colors(), Vec3(left, 1.0 - scale), Vec3(scale, scale), Vec3(left + scale, 0.0), Vec3(scale * 0.5, scale * 0.5));
+          
+          left = left + scale;
+          scale = scale * 0.5;
+
+          // bind 2nd buffer and vert shader, render sample from 2nd sample in 1st buffer
+          _canvas.bindFramebuffer(output);
+          _canvas.bind(_vertical);
+          _canvas.blit(_scratch.colors(), Vec3(left, 1.0 - scale), Vec3(scale, scale), Vec3(left, 0.0), Vec3(scale, scale));
+        }
+      } _canvas.popProjectionMatrix();
+    } _canvas.popModelViewMatrix();
+  }
+};

@@ -1,42 +1,95 @@
 #hdr
 #include "renderer.h"
 #include "real.h"
-#include "vertex_shader.h"
-#include "fragment_shader.h"
-#include "shader_program.h"
-#include "effects/gaussian_blur.h"
-#include "effects/downsampler.h"
-#include "renderer/gl3/framebuffer_texture.h"
+#include "shader_unit.h"
+//#include "effects/gaussian_blur.h"
+//#include "effects/downsampler.h"
+#include "effects/downsampling_blur.h"
+#include "canvas/framebuffer_texture.h"
 #end
 
-class BloomShader
+class BloomShader: public ShaderUnit
 {
   Renderer &_renderer;
-  ShaderProgram _shader;
-  VertexShader _vertex_shader;
-  FragmentShader _fragment;
   Canvas2D &_canvas;
 
 public:
   BloomShader(Canvas2D &canvas)
-    : _renderer(canvas.renderer()),
-      _shader(canvas.renderer()),
-      _vertex_shader("shaders/basic_vertex.glsl"),
-      _fragment("shaders/bloom.glsl"),
+    : ShaderUnit(canvas.renderer(), "shaders/basic_vertex.glsl", "shaders/bloom.glsl", true),
+      _renderer(canvas.renderer()),
       _canvas(canvas)
   {
-    _shader.attach(_vertex_shader);
-    _shader.attach(_fragment);
-    _shader.bind_data(0, "outColor");
-    _shader.relink();
+    relink();
   }
 
-  void render(Texture &colors, Texture &bloom, Texture &downsamples, int num_samples, float brightness = 1.0)
+  virtual void bindData(ShaderProgram &shader)
+  {
+    shader.bind_data(FramebufferTexture::COLORS, "outColor");
+  }
+
+  virtual void updateUniforms(ShaderProgram &shader)
+  {
+    shader.setUniformi("inColors", 0);
+    shader.setUniformi("inBloom", 1);
+    shader.setUniformi("inBloomSamples", 2);
+  }
+
+  void setNumSamples(GLint num_samples)
+  {
+    setUniformi("inBloomNumSamples", num_samples);
+  }
+
+  void setBrightness(Real brightness)
+  {
+    setUniformr("inBloomBrightness", brightness);
+  }
+};
+
+class Bloom
+{
+  Canvas2D &_canvas;
+  BloomShader _shader;
+  //GaussianBlur _blur;
+  //DownSampler _downsampler;
+  DownsamplingBlur _dblur;
+  FramebufferTexture &_scratch_fb, &_scaled_fb;
+  
+public:
+  Bloom(Canvas2D &canvas, int samples, int blur_size, FramebufferTexture &scratch_fb, FramebufferTexture &scaled_fb)
+    : _canvas(canvas),
+      _shader(canvas),
+      //_blur(canvas, blur_size, scratch_fb),
+      //_downsampler(canvas, samples),
+      _dblur(canvas, samples, blur_size, scratch_fb),
+      _scratch_fb(scratch_fb),
+      _scaled_fb(scaled_fb)
+  {
+  }
+
+  void render(GL3::Framebuffer &output, Texture &colors, Texture &bloom, float brightness = 1.0)
+  {
+    //_blur.render(_scaled_fb.framebuffer(), bloom);
+    //_scratch_fb.bindFramebuffer();
+    //_downsampler.render(_scaled_fb.colors());
+    //output.bind();
+    //renderBloom(colors, bloom, _scaled_fb.colors(), 1, brightness);
+    //renderBloom(colors, bloom, _scaled_fb.colors(), _downsampler.numSamples(), brightness);
+    
+    //_scaled_fb.bindFramebuffer();
+    //_downsampler.render(bloom);
+    //_blur.render(_scaled_fb.framebuffer(), _scaled_fb.colors());
+    _dblur.render(_scaled_fb, bloom);
+    _canvas.bindFramebuffer(output);
+    renderBloom(colors, bloom, _scaled_fb.colors(), _dblur.numSamples(), brightness);
+  }
+
+  void renderBloom(Texture &colors, Texture &bloom, Texture &downsamples, int num_samples, float brightness = 1.0)
   {
     _canvas.bind(_shader);
-    bindUniforms(num_samples, brightness);
+    _shader.setNumSamples(num_samples);
+    _shader.setBrightness(brightness);
 
-    _renderer.clear();
+    _canvas.clear();
     _canvas.pushModelViewMatrix(); {
       _canvas.setModelViewMatrix(Matrix::identity());
       _canvas.pushProjectionMatrix(); {
@@ -50,42 +103,5 @@ public:
     } _canvas.popModelViewMatrix();
 
     ASSERT_GL_ERROR;
-  }
-
-  void bindUniforms(int num_samples, float brightness)
-  {
-    _shader.setUniformi("inColors", 0);
-    _shader.setUniformi("inBloom", 1);
-    _shader.setUniformi("inBloomSamples", 2);
-    _shader.setUniformi("inBloomNumSamples", num_samples);
-    _shader.setUniformr("inBloomBrightness", brightness);
-    ASSERT_GL_ERROR;
-  }
-};
-
-class Bloom
-{
-  BloomShader _shader;
-  GaussianBlur _blur;
-  DownSampler _downsampler;
-  GL3::FramebufferTexture &_scratch_fb, &_scaled_fb;
-  
-public:
-  Bloom(Canvas2D &canvas, int samples, int blur_size, GL3::FramebufferTexture &scratch_fb, GL3::FramebufferTexture &scaled_fb)
-    : _shader(canvas),
-      _blur(canvas, blur_size, scratch_fb),
-      _downsampler(canvas, samples),
-      _scratch_fb(scratch_fb),
-      _scaled_fb(scaled_fb)
-  {
-  }
-
-  void render(GL3::Framebuffer &output, Texture &colors, Texture &bloom, float brightness = 1.0)
-  {
-    _scaled_fb.bindFramebuffer();
-    _downsampler.render(bloom);
-    _blur.render(_scaled_fb.framebuffer(), _scaled_fb.colors());
-    output.bind();
-    _shader.render(colors, bloom, _scaled_fb.colors(), _downsampler.numSamples(), brightness);
   }
 };

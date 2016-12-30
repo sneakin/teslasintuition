@@ -1,0 +1,72 @@
+#hdr
+#include "renderer.h"
+#include "vertex_shader.h"
+#include "fragment_shader.h"
+#include "shader_program.h"
+#end
+
+class ShaderUnit
+{
+  ShaderProgram _shader;
+  VertexShader _vertex;
+  FragmentShader _fragment;
+
+public:
+  ShaderUnit(Renderer &renderer, const char *vertex_shader, const char *fragment_shader, bool subclass = false)
+    : _shader(renderer),
+      _vertex(vertex_shader),
+      _fragment(fragment_shader)
+  {
+    _shader.attach(_vertex);
+    _shader.attach(_fragment);
+    if(!subclass) {
+      relink();
+    }
+  }
+
+  void relink()
+  {
+    bindData(_shader);
+    _shader.relink();
+  }
+
+  virtual ~ShaderUnit()
+  {
+  }
+
+  ShaderProgram &shader() { return _shader; }
+
+  virtual void bindData(ShaderProgram &shader)
+  {
+  }
+
+  virtual void updateUniforms(ShaderProgram &shader)
+  {
+  }
+  
+  void bind()
+  {
+    _shader.bind();
+    updateUniforms(_shader);
+  }
+
+  GLuint uniformLocation(const char *uniform)
+  {
+    return _shader.uniformLocation(uniform);
+  }
+  
+  void setUniformi(const char *uniform, GLuint value)
+  {
+    _shader.setUniformi(uniform, value);
+  }
+
+  void setUniformr(const char *uniform, Real value)
+  {
+    _shader.setUniformr(uniform, value);
+  }
+
+  void setUniformfv(const char *uniform, GLuint count, const GLfloat values[])
+  {
+    _shader.setUniformfv(uniform, count, values);
+  }
+};

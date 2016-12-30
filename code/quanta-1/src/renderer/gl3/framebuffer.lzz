@@ -12,17 +12,18 @@ namespace GL3
   {
     GLuint _id;
     GLenum _mode;
+    GLuint _width, _height;
     
   public:
     Framebuffer()
-      : _mode(GL_FRAMEBUFFER)
+      : _mode(GL_FRAMEBUFFER), _width(0), _height(0)
     {
       glGenFramebuffers(1, &_id);
       ASSERT_GL_ERROR;
     }
 
-    Framebuffer(GLint id)
-      : _mode(GL_FRAMEBUFFER)
+    Framebuffer(GLint id, int w = 0, int h = 0)
+      : _mode(GL_FRAMEBUFFER), _width(w), _height(h)
     {
       _id = id;
     }    
@@ -36,6 +37,14 @@ namespace GL3
     }
 
     GLuint id() const { return _id; }
+    GLuint width() const { return _width; }
+    GLuint height() const { return _height; }
+
+    void resize(int w, int h)
+    {
+      _width = w;
+      _height = h;
+    }
 
     void bind(GLenum mode = GL_FRAMEBUFFER)
     {

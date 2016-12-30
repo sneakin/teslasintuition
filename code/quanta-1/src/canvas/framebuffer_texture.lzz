@@ -1,0 +1,81 @@
+#hdr
+#include "vec3.h"
+#include "renderer/gl3/framebuffer.h"
+#include "renderer/gl3/renderbuffer.h"
+#include "renderer/texture.h"
+#end
+
+#src
+#include "canvas/stock_shader_program.h"
+#end
+
+class FramebufferTexture
+{
+private:
+  GL3::Framebuffer _fb;
+  Texture _colors, _velocity, _bloom;
+  Texture _depth;
+  Texture _mydepth;
+  GL3::Renderbuffer _stencil;
+  
+public:
+  enum Buffers { COLORS, VELOCITY, BLOOM, DEPTH };
+    
+  FramebufferTexture(int width, int height)
+    : _colors(width, height, GL_RGBA, false, false, GL_RGBA, GL_UNSIGNED_BYTE),
+      _velocity(width, height, GL_RGBA16F, false, false, GL_RGBA, GL_FLOAT),
+      _bloom(width, height, GL_RGBA, false, false, GL_RGBA, GL_UNSIGNED_BYTE),
+      _depth(width, height, GL_DEPTH_COMPONENT24, false, false, GL_DEPTH_COMPONENT, GL_FLOAT),
+      _mydepth(width, height, GL_RGBA, false, false, GL_RGB, GL_UNSIGNED_BYTE),
+      _stencil(GL_DEPTH_STENCIL, width, height)
+  {
+    // fixme GL error in here somewhere
+    _fb.resize(width, height);
+    _fb.attachTexture(GL_COLOR_ATTACHMENT0 + COLORS, _colors);
+    _fb.attachTexture(GL_COLOR_ATTACHMENT0 + VELOCITY, _velocity);
+    _fb.attachTexture(GL_COLOR_ATTACHMENT0 + BLOOM, _bloom);
+    _fb.attachTexture(GL_COLOR_ATTACHMENT0 + DEPTH, _mydepth);
+    //_fb.attachRenderbuffer(GL_DEPTH_STENCIL_ATTACHMENT, _stencil); // stencil?
+    _fb.attachTexture(GL_DEPTH_ATTACHMENT, _depth);
+    GLenum buffers1[] = {
+      GL_COLOR_ATTACHMENT0 + COLORS,
+      GL_COLOR_ATTACHMENT0 + VELOCITY,
+      GL_COLOR_ATTACHMENT0 + BLOOM,
+      GL_COLOR_ATTACHMENT0 + DEPTH
+    };
+    _fb.drawTo(4, buffers1);
+    if(!_fb.isComplete()) {
+      std::cerr << "Framebuffer is incomplete." << std::endl;
+    }
+    _fb.unbind();
+  }
+
+  GL3::Framebuffer &framebuffer() { return _fb; }
+  Texture &colors() { return _colors; }
+  Texture &depth() { return _depth; }
+  Texture &velocity() { return _velocity; }
+  Texture &bloom() { return _bloom; }
+  Texture &mydepth() { return _mydepth; }
+
+  int width() const { return _colors.width(); }
+  int height() const { return _colors.height(); }
+
+  void bindFramebuffer() { _fb.bind(); }
+  void unbindFramebuffer() { _fb.unbind(); }
+
+  void clear(GLuint n, const Vec3 &v)
+  {
+    _fb.clear(n, v);
+  }
+
+  void resize(GLuint width, GLuint height)
+  {
+    _colors.allocateEmpty(width, height, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE);
+    _velocity.allocateEmpty(width, height, GL_RGBA, GL_RGBA, GL_FLOAT);
+    _bloom.allocateEmpty(width, height, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE);
+    _depth.allocateEmpty(width, height, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT, GL_FLOAT);
+    _mydepth.allocateEmpty(width, height, GL_RGBA, GL_RGB, GL_UNSIGNED_BYTE);
+    _stencil.resize(width, height);
+    _fb.resize(width, height);
+  }
+};

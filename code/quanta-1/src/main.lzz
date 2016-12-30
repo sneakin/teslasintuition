@@ -22,13 +22,10 @@
 #include "quanta.h"
 #include "quanta_renderer.h"
 #include "screen_shooter.h"
-#include "shader_program.h"
-#include "vertex_shader.h"
-#include "fragment_shader.h"
+#include "canvas/stock_shader_program.h"
 
 #include "renderer/gl3/framebuffer.h"
-#include "renderer/gl3/renderbuffer.h"
-#include "renderer/gl3/framebuffer_texture.h"
+#include "canvas/framebuffer_texture.h"
 #include "effects/motion_blur.h"
 #include "effects/bloom.h"
 #include "effects/downsampler.h"
@@ -123,18 +120,15 @@ int main(int argc, char *argv[])
   Texture logo(APP_TEXTURE_PATH + APP_LOGO);
 
   GL3::Framebuffer &fb = renderer.defaultFramebuffer();
-  //Texture fb_velocity(APP_WIDTH, APP_HEIGHT, GL_RGBA, false, false, GL_RGBA, GL_FLOAT);
-  //fb.attachTexture(GL_COLOR_ATTACHMENT1, fb_velocity);
-  //GLenum buffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
-  //fb.drawTo(2, buffers);
 
   const Vec3 fb_size(APP_WIDTH, APP_HEIGHT);
-  GL3::FramebufferTexture fb1(APP_WIDTH, APP_HEIGHT), fb2(APP_WIDTH, APP_HEIGHT);
-  GL3::FramebufferTexture scratch_fb(APP_WIDTH, APP_HEIGHT), scaled_fb(APP_WIDTH, APP_HEIGHT);
-  GL3::FramebufferTexture *front = &fb1, *back = &fb2;
+  FramebufferTexture fb1(APP_WIDTH, APP_HEIGHT), fb2(APP_WIDTH, APP_HEIGHT);
+  const int FB_WIDTH = 512, FB_HEIGHT = 512;
+  FramebufferTexture scratch_fb(FB_WIDTH, FB_HEIGHT), scaled_fb(FB_WIDTH, FB_HEIGHT);
+  FramebufferTexture *front = &fb1, *back = &fb2;
 
   MotionBlur mblur(canvas_2d);
-  Bloom bloom(canvas_2d, 4, 5, scratch_fb, scaled_fb);
+  Bloom bloom(canvas_2d, 8, 5, scratch_fb, scaled_fb);
 
   SDL_Event event;
   bool done = false;
@@ -142,7 +136,7 @@ int main(int argc, char *argv[])
 
   GLuint last_now = 0, now = SDL_GetTicks();
 
-#if 1 //def TEST_SCENE
+#ifdef TEST_SCENE
   Real x = 0.0, y = 0.0, scale = 1.0;
 
   canvas_2d.bind(shader_2d);
@@ -191,8 +185,7 @@ int main(int argc, char *argv[])
     renderer.updateTime(now);
     //renderer.setColorMatrix(Matrix::rotate(Vec3(now / 1000.0, now / 1000.0, now / 1000.0)));
 
-    front->bindFramebuffer();
-    renderer.setViewport(0, 0, fb_size.x(), fb_size.y());
+    canvas_2d.bindFramebuffer(*front);
     canvas_2d.bind(shader_2d);
 
     canvas_2d.pushProjectionMatrix(); {
@@ -202,7 +195,8 @@ int main(int argc, char *argv[])
       canvas_2d.setProjectionMatrix(Matrix::orthographicProjection(0.0, 0.0, 10.0, 10.0, 200.0, -200.0));
       canvas_2d.setVelocity(mouse - last_mouse);
       canvas_2d.setColor(Colors::White);
-      canvas_2d.renderSprite(logo, mouse + Vec3(0.0, 0.0, -1.0), Vec3(0.5, 0.5, 0), Vec3(scale, scale, 1.0), 0); //now / 1000.0);
+      //canvas_2d.renderSprite(logo, mouse + Vec3(0.0, 0.0, -1.0), Vec3(0.5, 0.5, 0), Vec3(scale, scale, 1.0), 0); //now / 1000.0);
+      canvas_2d.blit(logo, Vec3(0.0, 0.0), Vec3(0.5, 0.5), mouse + Vec3(0.0, 0.0, -1.0), Vec3(scale, scale, 1.0));
       canvas_2d.setVelocity(Vec3());
       canvas_2d.setColor(Colors::White);
       canvas_2d.renderSprite(back->colors(), Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0), Vec3(2.0, 2.0, 1.0), 0.0);
@@ -235,7 +229,7 @@ int main(int argc, char *argv[])
     mblur.render(front->colors(), front->depth(), front->velocity(), front->bloom());
     
     renderer.swap();
-    GL3::FramebufferTexture *t = front;
+    FramebufferTexture *t = front;
     front = back;
     back = t;
     
@@ -517,7 +511,8 @@ int main(int argc, char *argv[])
           window_width = event.window.data1;
           window_height = event.window.data2;
           std::cerr << "Window resized to " << window_width << "x" << window_height << std::endl;
-          renderer.setViewport(0, 0, window_width, window_height);
+          //renderer.setViewport(0, 0, window_width, window_height);
+          renderer.resize(window_width, window_height);
           fb1.resize(window_width, window_height);
           fb2.resize(window_width, window_height);
           scratch_fb.resize(window_width, window_height);
@@ -710,8 +705,8 @@ int main(int argc, char *argv[])
 
     canvas_3d.bind(shader_3d);
     canvas_3d.pushProjectionMatrix(); {
-      fb1.bindFramebuffer();
-      renderer.setViewport(window_width * 0.25, 0, window_width * 0.75, window_height);
+      canvas_3d.bindFramebuffer(fb1);
+      canvas_3d.setViewport(window_width * 0.25, 0, window_width * 0.75, window_height);
 
       light_id = canvas_3d.createPointLight(Vec3(0.0, 0.0, 0.0, 1.0), universe_size / 8.0, light_color);
       canvas_3d.setAmbientLight(ambient_color);
@@ -762,12 +757,15 @@ int main(int argc, char *argv[])
     ASSERT_GL_ERROR;
 
     // post processing
-    fb2.bindFramebuffer();
-    renderer.setViewport(0, 0, window_width, window_height);
+    // todo bug in the bloom that's dropping color in the downsampler
+    //renderer.defaultFramebuffer();
+    canvas_2d.bindFramebuffer(fb2);
     mblur.render(fb1.colors(), fb1.depth(), fb1.velocity(), fb1.bloom());
-    bloom.render(renderer.defaultFramebuffer(), fb2.colors(), fb2.bloom(), 1.0);
+    bloom.render(renderer.defaultFramebuffer(), fb2.colors(), fb2.bloom(), 2.0);
+    //bloom.render(renderer.defaultFramebuffer(), fb1.colors(), fb1.bloom(), 1.0);
 
     // side panes
+    renderer.defaultFramebuffer().bind();
     renderer.setViewport(0, 0, window_width, window_height);
     canvas_2d.bind(shader_2d);
     canvas_2d.pushProjectionMatrix(); {
@@ -782,8 +780,11 @@ int main(int argc, char *argv[])
           //renderer.mulColorMatrix(Matrix::scale(2.0) * Matrix::translation(-0.5));
           canvas_2d.renderSprite(fb1.velocity(), Vec3(0, 1, 0.0), Vec3(0.0, 0.0), Vec3(1.0, 1.0, 1.0), 0.0);
         } canvas_2d.popColorMatrix();
-        canvas_2d.renderSprite(scaled_fb.colors(), Vec3(0, 2, 0.0), Vec3(0.0, 0.0), Vec3(1.0, 1.0, 1.0), 0.0);
-        canvas_2d.renderSprite(fb2.bloom(), Vec3(0, 3, 0.0), Vec3(0.0, 0.0), Vec3(1.0, 1.0, 1.0), 0.0);
+        canvas_2d.renderSprite(scratch_fb.colors(), Vec3(0, 2, 0.0), Vec3(0.0, 0.0), Vec3(2.0, 1.0, 1.0), 0.0);
+        canvas_2d.renderSprite(scaled_fb.colors(), Vec3(0, 3, 0.0), Vec3(0.0, 0.0), Vec3(2.0, 1.0, 1.0), 0.0);
+        //canvas_2d.renderSprite(fb1.bloom(), Vec3(0, 3, 0.0), Vec3(0.0, 0.0), Vec3(1.0, 1.0, 1.0), 0.0);
+        //canvas_2d.renderSprite(fb2.bloom(), Vec3(1, 3, 0.0), Vec3(0.0, 0.0), Vec3(1.0, 1.0, 1.0), 0.0);
+        //canvas_2d.renderSprite(fb2.mydepth(), Vec3(2, 3, 0.0), Vec3(0.0, 0.0), Vec3(1.0, 1.0, 1.0), 0.0);
       } canvas_2d.popModelViewMatrix();
     } canvas_2d.popProjectionMatrix();
 

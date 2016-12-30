@@ -20,7 +20,6 @@ quanta_SRC = math-fun.lzz \
 	renderer/line_mesh.lzz \
 	renderer/gl3/framebuffer.lzz \
 	renderer/gl3/renderbuffer.lzz \
-	renderer/gl3/framebuffer_texture.lzz \
 	image.lzz \
 	renderer.lzz \
 	geometry/triangle.lzz \
@@ -35,6 +34,7 @@ quanta_SRC = math-fun.lzz \
 	argument_error.lzz \
 	not_found_error.lzz \
 	really_not_found_error.lzz \
+  shader_unit.lzz \
 	shader_program.lzz \
 	shader.lzz \
 	vertex_shader.lzz \
@@ -42,12 +42,15 @@ quanta_SRC = math-fun.lzz \
 	vertex_array.lzz \
 	array_buffer.lzz \
 	index_buffer.lzz \
+	canvas/framebuffer_texture.lzz \
+  canvas/stock_shader_program.lzz \
 	canvas.lzz \
 	effects/downsampler.lzz \
 	effects/base_blur.lzz \
 	effects/horizontal_blur.lzz \
 	effects/vertical_blur.lzz \
 	effects/gaussian_blur.lzz \
+	effects/downsampling_blur.lzz \
 	effects/motion_blur.lzz \
 	effects/bloom.lzz \
 	main.lzz
@@ -90,6 +93,10 @@ CFLAGS+=-O3 -fomit-frame-pointer -mfpu=neon-vfpv4
 else
 CFLAGS+=-O3 -mtune=nocona -msse -msse2 -msse3 -mfpmath=sse
 endif
+endif
+
+ifdef TEST_SCENE
+CFLAGS+=-DTEST_SCENE=$(TEST_SCENE)
 endif
 
 ifdef WRAPAROUND

@@ -1,32 +1,41 @@
 #hdr
 #include "canvas.h"
-#include "vertex_shader.h"
-#include "fragment_shader.h"
-#include "shader_program.h"
+#include "shader_unit.h"
+#include "canvas/framebuffer_texture.h"
 #end
+
+class DownSamplerShader: public ShaderUnit
+{
+public:
+  DownSamplerShader(Renderer &renderer)
+    : ShaderUnit(renderer, "shaders/basic_vertex.glsl", "shaders/downsampler_fragment.glsl", true)
+  {
+    relink();
+  }
+
+  virtual void bindData(ShaderProgram &shader)
+  {
+    shader.bind_data(FramebufferTexture::COLORS, "outColor");
+  }
+
+  virtual void updateUniforms(ShaderProgram &shader)
+  {
+    shader.setUniformi("tex", 0);
+  }
+};
 
 class DownSampler
 {
-  Renderer &_renderer;
   Canvas2D &_canvas;
-  ShaderProgram _shader;
-  VertexShader _vertex_shader;
-  FragmentShader _fragment;
+  DownSamplerShader _shader;
   int _samples;
 
 public:
   DownSampler(Canvas2D &canvas, int samples = 4)
-    : _renderer(canvas.renderer()),
-      _canvas(canvas),
+    : _canvas(canvas),
       _shader(canvas.renderer()),
-      _vertex_shader("shaders/basic_vertex.glsl"),
-      _fragment("shaders/basic_fragment.glsl"),
       _samples(samples)
   {
-    _shader.attach(_vertex_shader);
-    _shader.attach(_fragment);
-    _shader.bind_data(0, "outColor");
-    _shader.relink();
   }
 
   int numSamples() const { return _samples; }
@@ -34,9 +43,7 @@ public:
   void render(Texture &colors)
   {
     _canvas.bind(_shader);
-    bindUniforms();
-
-    _renderer.clear();
+    _canvas.clear();
     _canvas.pushModelViewMatrix(); {
       _canvas.setModelViewMatrix(Matrix::identity());
       _canvas.pushProjectionMatrix(); {
@@ -46,14 +53,8 @@ public:
         for(int s = 0; s < _samples; s++ ) {
           Real scale = pow(0.5, s);
           _canvas.renderSprite(colors, Vec3(1.0 - scale, 0, -100), Vec3(0, 0), Vec3(scale * 0.5, scale * 0.5, 1.0), 0);
-          //_renderer.renderSprite(colors, Vec3(1.0 - scale, 0, -100), Vec3(0, 0), Vec3(scale * 0.5, scale * 0.5, 1.0), 0);
         }
       } _canvas.popProjectionMatrix();
     } _canvas.popModelViewMatrix();
-  }
-
-  void bindUniforms()
-  {
-    _shader.setUniformi("inColors", 0);
   }
 };

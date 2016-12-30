@@ -16,6 +16,7 @@
 class Texture
 {
   GLuint _id;
+  GLuint _width, _height;
 
 public:
   Texture(const std::string &path, bool repeat_x = true, bool repeat_y = true)
@@ -66,6 +67,8 @@ public:
   }
 
   GLuint id() const { return _id; }
+  GLuint width() const { return _width; }
+  GLuint height() const { return _height; }
 
   void bind(GLuint tex_unit = 0) const
   {
@@ -148,6 +151,9 @@ public:
 
     SDL_FreeSurface(surf);
 
+    _width = image.width();
+    _height = image.height();
+
     return true;
   }
 
@@ -161,6 +167,9 @@ public:
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
     ASSERT_GL_ERROR;
     unbind();
+
+    _width = w;
+    _height = h;
   }
 
   void allocateEmpty(GLuint width, GLuint height, GLenum int_fmt, GLenum format, GLenum type, GLuint border = 0)
@@ -175,5 +184,8 @@ public:
     //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
     ASSERT_GL_ERROR;
     unbind();
+
+    _width = width;
+    _height = height;
   }
 };

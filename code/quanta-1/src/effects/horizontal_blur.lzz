@@ -2,6 +2,15 @@
 #include "effects/base_blur.h"
 #end
 
+class HorizontalBlurShader: public BaseBlurShader
+{
+public:
+  HorizontalBlurShader(Renderer &r, int size)
+    : BaseBlurShader(r, "shaders/horizontal_blur.glsl", size)
+  {
+  }
+};
+
 class HorizontalBlur: public BaseBlur
 {
 public:

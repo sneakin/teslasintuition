@@ -1,0 +1,37 @@
+#hdr
+#include "shader_unit.h"
+#include "canvas/framebuffer_texture.h"
+#end
+
+class StockShaderProgram: public ShaderUnit
+{
+public:
+  enum TextureUnits { TEX_COLOR };
+
+  StockShaderProgram(Renderer &renderer, const char *vertex_shader, const char *fragment_shader)
+    : ShaderUnit(renderer, vertex_shader, fragment_shader, true)
+  {
+    relink();
+  }
+
+  virtual void bindData(ShaderProgram &shader)
+  {
+    // fragment shader outputs
+    shader.bind_data(FramebufferTexture::COLORS, "outColor");
+    shader.bind_data(FramebufferTexture::VELOCITY, "outVelocity");
+    shader.bind_data(FramebufferTexture::BLOOM, "outBloom");
+    shader.bind_data(FramebufferTexture::DEPTH, "outDepth");
+  }
+
+  virtual void updateUniforms(ShaderProgram &shader)
+  {
+    // fragment shader inputs : texture unit mapping
+    shader.setUniformi("tex", TEX_COLOR);
+  }
+      
+  GLuint positionAttribute() const { return 0; }
+  GLuint colorAttribute() const { return 1; }
+  GLuint normalAttribute() const { return 2; }
+  GLuint textureCoordAttribute() const { return 3; }
+};
+

@@ -3,7 +3,6 @@ uniform sampler2D tex;
 uniform sampler2D depth;
 uniform sampler2D velocity;
 uniform sampler2D fragment_data;
-uniform sampler2D last_frame;
 uniform sampler2D bloom;
 
 uniform mat4 mProjection, mColor;
