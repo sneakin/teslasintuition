@@ -30,10 +30,10 @@ public:
     _verts.update(verts, 2);
     _varray.enableAttribute(canvas.positionAttribute(), 4, GL_REAL, GL_FALSE, 0, 0);
     _varray.enableAttribute(canvas.textureCoordAttribute(), 4, GL_REAL, GL_FALSE, 0, 0);
-    Vec3 colors[2] = { Colors::White, Colors::White };
+    Vec3 colors[2] = { Colors::White(), Colors::White() };
     _colors.update(verts, 2);
     _varray.enableAttribute(canvas.colorAttribute(), 4, GL_REAL, GL_FALSE, 0, 0);
-    Vec3 normals[2] = { Vec3::Z, Vec3::Z };
+    Vec3 normals[2] = { Vec3::Z(), Vec3::Z() };
     _normals.update(normals, 2);
     _varray.enableAttribute(canvas.normalAttribute(), 4, GL_REAL, GL_FALSE, 0, 0);
     _varray.unbind();

@@ -32,7 +32,7 @@ public:
       _canvas.pushProjectionMatrix(); {
         _canvas.setProjectionMatrix(Matrix::orthographicProjection(0.0, 0.0, 1.0, 1.0, -100.0, 100.0));
         _canvas.setVelocity(Vec3());
-        _canvas.setColor(Colors::White);
+        _canvas.setColor(Colors::White());
 
         // needs to do a full blur on the first sample, then using that
         // blur the second sample, etc.

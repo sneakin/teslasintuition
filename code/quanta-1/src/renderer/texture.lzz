@@ -48,7 +48,7 @@ public:
     : _id(0)
   {
     // todo sync surface
-    Vec3 p[4] = { Colors::White, Colors::White, Colors::White, Colors::White };
+    Vec3 p[4] = { Colors::White(), Colors::White(), Colors::White(), Colors::White() };
     update(0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_REAL, p);
     setRepeat(true, true);
   }

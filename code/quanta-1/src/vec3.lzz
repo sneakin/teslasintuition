@@ -25,8 +25,17 @@ private:
   RealArray_4 _v;
   
 public:
-  static const Vec3 X = Vec3(1, 0, 0), Y = Vec3(0, 1, 0), Z = Vec3(0, 0, 1), W = Vec3(0, 0, 0, 1), Origin = Vec3(0, 0, 0, 0);
-  static const Vec3 nX = Vec3(-1, 0, 0), nY = Vec3(0, -1, 0), nZ = Vec3(0, 0, -1), nW = Vec3(0, 0, 0, -1);
+#define STATIC_VEC(name, x, y, z, w) static const Vec3 &name() { static Vec3 v(x, y, z, w); return v; }
+  STATIC_VEC(X, 1, 0, 0, 1);
+  STATIC_VEC(Y, 0, 1, 0, 1);
+  STATIC_VEC(Z, 0, 0, 1, 1);
+  STATIC_VEC(W, 0, 0, 0, 1);
+  STATIC_VEC(Origin, 0, 0, 0, 0);
+  STATIC_VEC(nX, -1, 0, 0, 1);
+  STATIC_VEC(nY, 0, -1, 0, 1);
+  STATIC_VEC(nZ, 0, 0, -1, 1);
+  STATIC_VEC(nW, 0, 0, 0, -1);
+#undef STATIC_VEC
 
   Vec3(const RealArray_4 other)
   {
@@ -48,7 +57,6 @@ public:
   }
   Vec3(const Vec3 &other)
   {
-    std::cerr << "Vec3::Vec3(" << other << ")" << std::endl;
     set(other);
   }
 
@@ -240,7 +248,6 @@ public:
 
   void set(const Vec3 &other)
   {
-    std::cerr << *this << "::set(" << other << ")" << std::endl;
 #ifdef SLOW_VECTOR
     for(int i = 0; i < 4; i++) {
       _v[i] = other._v[i];
@@ -278,7 +285,7 @@ public:
 
   static Real randf()
   {
-    return (rand() & 0xFFFFFF) / (Real)0xFFFFFF;
+    return ::clamp((rand() & 0xFFFFFF) / (Real)0xFFFF * (Real)2.0, (Real)1.0, (Real)0.0);
   }
 
   static Vec3 random(const Vec3 &min, const Vec3 &max)

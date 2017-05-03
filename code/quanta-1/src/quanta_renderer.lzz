@@ -17,7 +17,7 @@ public:
   IcosahedronRenderer _icosa_ren;
   Canvas3D &_canvas;
 
-  static const Material QuantaMaterial = Material(Colors::White, Colors::White * 0.5, 100.0, Colors::White * 0.8);
+  static const Material QuantaMaterial = Material(Colors::White(), Colors::White() * 0.5, 100.0, Colors::White() * 0.8);
 
   QuantaRenderer(Canvas3D &canvas)
     : _icosa(1.0), _icosa_ren(_icosa, canvas), _canvas(canvas)
@@ -33,7 +33,7 @@ public:
       Quantum q = quanta[i];
       _canvas.pushModelViewMatrix(); {
         _canvas.mulModelViewMatrix(Matrix::scale(Vec3(quanta.quantum_radius(), quanta.quantum_radius(), quanta.quantum_radius())) * Matrix::translation(q.position()));
-        _canvas.setColor(q.color().abs() + Vec3::W);
+        _canvas.setColor(q.color().abs() + Vec3::W());
         _canvas.setVelocity(q.velocity());
         _icosa_ren.render(camera);
       } _canvas.popModelViewMatrix();
@@ -44,7 +44,7 @@ public:
   {
     for(int i = 0; i < quanta.size(); i++) {
       Quantum q = quanta[i];
-      _canvas.bindMaterial(GL_FRONT_AND_BACK, Canvas3D::AxisMaterial);
+      _canvas.bindMaterial(GL_FRONT_AND_BACK, Canvas3D::AxisMaterial());
       _canvas.setVelocity(q.velocity());
       _canvas.renderVector(q.position(), q.velocity() * _icosa.radius() * 10.0, q.color());
     }

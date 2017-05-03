@@ -9,7 +9,7 @@ class Quantum
   Real _scale, _mass;
 
 public:
-  Quantum(const Vec3 &position, const Vec3 &velocity, Real scale = 100, const Vec3 &color = Colors::White, Real mass = 1.0)
+  Quantum(const Vec3 &position, const Vec3 &velocity, Real scale = 100, const Vec3 &color = Colors::White(), Real mass = 1.0)
     : _position(position), _velocity(velocity), _color(color), _scale(scale), _mass(mass)
   {
   }

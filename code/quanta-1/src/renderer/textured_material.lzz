@@ -13,7 +13,7 @@ class TexturedMaterial
   Texture _texture;
 
 public:
-  TexturedMaterial(const std::string &path, const Vec3 &diffuse = Colors::White, const Vec3 &specular = Colors::Clear, int shininess = 0, const Vec3 &ambient = Colors::Black)
+  TexturedMaterial(const std::string &path, const Vec3 &diffuse = Colors::White(), const Vec3 &specular = Colors::Clear(), int shininess = 0, const Vec3 &ambient = Colors::Black())
     : _material(diffuse, specular, shininess, ambient), _texture(path, true, true)
   {
   }

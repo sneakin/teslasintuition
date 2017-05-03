@@ -10,24 +10,28 @@ using std::isinf;
 class Colors
 {
 public:
-  static const Vec3 Clear = Vec3(1, 1, 1, 0);
-  static const Vec3 Opaque = Vec3(1, 1, 1, 1);
-  static const Vec3 White = Vec3(1, 1, 1);
-  static const Vec3 Gray = Vec3(0.5, 0.5, 0.5);
-  static const Vec3 Black = Vec3(0, 0, 0);
-  static const Vec3 Red = Vec3(1, 0, 0);
-  static const Vec3 Green = Vec3(0, 1, 0);
-  static const Vec3 Blue = Vec3(0, 0, 1);
-  static const Vec3 Yellow = Vec3(1, 1, 0);
-  static const Vec3 Cyan = Vec3(0, 1, 1);
-  static const Vec3 Magenta = Vec3(1, 0, 1);
-
+#define COLOR(name, r, g, b, a) static const Vec3 &name() { static Vec3 c(r, g, b, a); return c; }
+  COLOR(Clear, 1, 1, 1, 0);
+  COLOR(Opaque, 1, 1, 1, 1);
+#undef COLOR
+#define COLOR(name, r, g, b) static const Vec3 &name() { static Vec3 c(r, g, b, 1.0); return c; }
+  COLOR(White, 1, 1, 1);
+  COLOR(Gray, 0.5, 0.5, 0.5);
+  COLOR(Black, 0, 0, 0);
+  COLOR(Red, 1, 0, 0);
+  COLOR(Green, 0, 1, 0);
+  COLOR(Blue, 0, 0, 1);
+  COLOR(Yellow, 1, 1, 0);
+  COLOR(Cyan, 0, 1, 1);
+  COLOR(Magenta, 1, 0, 1);
+#undef COLOR
+  
   static const int NumColors = 6;
 
   static const Vec3 &color(int n)
   {
-    static const Vec3 *palette[NumColors] = { &Red, &Yellow, &Green, &Cyan, &Blue, &Magenta };
-    return *palette[abs(n) % NumColors];
+    static const Vec3 palette[NumColors] = { Red(), Yellow(), Green(), Cyan(), Blue(), Magenta() };
+    return palette[abs(n) % NumColors];
   }
 
   static const Vec3 &color()
@@ -38,9 +42,9 @@ public:
   static Vec3 color(Real n)
   {
     if(isinf(n)) {
-      return White;
+      return White();
     } else if(isnan(n)) {
-      return Black;
+      return Black();
     } else {
       Vec3 a = color((int)floorr(n)), b = color((int)ceilr(n));
       Real i, t = modfr(n, &i);

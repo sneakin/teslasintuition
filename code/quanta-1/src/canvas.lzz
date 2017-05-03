@@ -30,7 +30,7 @@ class Canvas
   
 public:
   Canvas(Renderer &renderer)
-    : _renderer(renderer), _fragment(0), _uniform_color(Colors::White)
+    : _renderer(renderer), _fragment(0), _uniform_color(Colors::White())
   {
     _quad = new SquareMesh(*this);
     _line = new LineMesh(*this);
@@ -259,18 +259,18 @@ public:
     renderAxis(camera.position(), camera.right(), camera.up());
     pushColorMatrix(); {
       mulColorMatrix(Matrix::rotate(Vec3(M_PI / 4.0, M_PI / 4.0, M_PI / 4.0)));
-      renderAxis(camera.position(), Vec3::X, Vec3::Y);
+      renderAxis(camera.position(), Vec3::X(), Vec3::Y());
     } popColorMatrix();
   }
 
   virtual void renderOriginAxis()
   {
-    renderVector(Vec3(), Vec3::X, Colors::Red);
-    renderVector(Vec3(), Vec3::Y, Colors::Green);
-    renderVector(Vec3(), Vec3::Z, Colors::Blue);
+    renderVector(Vec3(), Vec3::X(), Colors::Red());
+    renderVector(Vec3(), Vec3::Y(), Colors::Green());
+    renderVector(Vec3(), Vec3::Z(), Colors::Blue());
   }
 
-  void renderAxis(const Vec3 &origin, const Vec3 &right = Vec3::X, const Vec3 &up = Vec3::Y)
+  void renderAxis(const Vec3 &origin, const Vec3 &right = Vec3::X(), const Vec3 &up = Vec3::Y())
   {
     pushModelViewMatrix(); {
       mulModelViewMatrix(Matrix::lookAt(up.cross(right), up) * Matrix::translation(origin));
@@ -278,7 +278,7 @@ public:
     } popModelViewMatrix();
   }
 
-  void renderVector(const Vec3 &origin, const Vec3 &v, const Vec3 &color = Colors::White)
+  void renderVector(const Vec3 &origin, const Vec3 &v, const Vec3 &color = Colors::White())
   {
     ASSERT_GL_ERROR;
     glLineWidth(4.0);
@@ -286,7 +286,7 @@ public:
     ASSERT_GL_ERROR;
     setColor(color);
     pushModelViewMatrix(); {
-      mulModelViewMatrix(Matrix::scale(v * Vec3(1.0, 1.0, 1.0, 0.0) + Vec3::W) * Matrix::translation(origin));
+      mulModelViewMatrix(Matrix::scale(v * Vec3(1.0, 1.0, 1.0, 0.0) + Vec3::W()) * Matrix::translation(origin));
       _line->bind();
       glDrawArrays(GL_LINES, 0, 2);
       _line->unbind();
@@ -294,7 +294,7 @@ public:
     ASSERT_GL_ERROR;
   }
 
-  void renderPoint(const Vec3 &position, const Vec3 &color = Colors::White, Real diameter = 1.0)
+  void renderPoint(const Vec3 &position, const Vec3 &color = Colors::White(), Real diameter = 1.0)
   {
     ASSERT_GL_ERROR;
     glPointSize(clamp<Real>(diameter, 10.0));
@@ -308,7 +308,7 @@ public:
     ASSERT_GL_ERROR;
   }
 
-  void renderLine(const Vec3 &a, const Vec3 &b, const Vec3 &color = Colors::White)
+  void renderLine(const Vec3 &a, const Vec3 &b, const Vec3 &color = Colors::White())
   {
     renderVector(a, b - a, color);
   }
@@ -331,7 +331,11 @@ class Canvas3D: public Canvas
   Material _material;
   
 public:
-  static const Material AxisMaterial = Material(Colors::White, Colors::Clear, 0.0, Colors::White, Colors::White);
+  static Material &AxisMaterial()
+  {
+    static Material m(Colors::White(), Colors::Clear(), 0.0, Colors::White(), Colors::White());
+    return m;
+  }
   
   Canvas3D(Renderer &renderer)
     : Canvas(renderer)
@@ -412,7 +416,7 @@ public:
 
   virtual void renderOriginAxis()
   {
-    bindMaterial(GL_FRONT_AND_BACK, AxisMaterial);
+    bindMaterial(GL_FRONT_AND_BACK, AxisMaterial());
     Canvas::renderOriginAxis();
     unbindMaterial(GL_FRONT_AND_BACK);
   }

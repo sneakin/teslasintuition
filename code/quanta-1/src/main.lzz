@@ -192,14 +192,14 @@ int game_main(int argc, char *argv[])
     canvas_2d.pushProjectionMatrix(); {
       renderer.clear();
       //front->clear(1, Vec3(0.5, 0.5, 0.5));
-      front->clear(1, Vec3::W);
+      front->clear(1, Vec3::W());
       canvas_2d.setProjectionMatrix(Matrix::orthographicProjection(0.0, 0.0, 10.0, 10.0, 200.0, -200.0));
       canvas_2d.setVelocity(mouse - last_mouse);
-      canvas_2d.setColor(Colors::White);
+      canvas_2d.setColor(Colors::White());
       //canvas_2d.renderSprite(logo, mouse + Vec3(0.0, 0.0, -1.0), Vec3(0.5, 0.5, 0), Vec3(scale, scale, 1.0), 0); //now / 1000.0);
       canvas_2d.blit(logo, Vec3(0.0, 0.0), Vec3(0.5, 0.5), mouse + Vec3(0.0, 0.0, -1.0), Vec3(scale, scale, 1.0));
       canvas_2d.setVelocity(Vec3());
-      canvas_2d.setColor(Colors::White);
+      canvas_2d.setColor(Colors::White());
       canvas_2d.renderSprite(back->colors(), Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0), Vec3(2.0, 2.0, 1.0), 0.0);
       canvas_2d.pushColorMatrix(); {
         canvas_2d.mulColorMatrix(Matrix::translation(0.5) * Matrix::scale(0.5));
@@ -216,7 +216,7 @@ int game_main(int argc, char *argv[])
         for(int n = -10; n <= 10; n++) {
           Matrix r = Matrix::rotateZ(now * 2.0 * M_PI / 1000.0 * 0.5);
           Matrix next_r = Matrix::rotateZ((float)(now + (now - last_now)) * 2.0 * M_PI / 1000.0 * 0.5);
-          Vec3 p = Matrix::translation(Vec3(0.0, 0.0, 10 * n)) * Matrix::rotateZ((float)n * 2.0 * M_PI / (float)10) * Matrix::scale(4.0) * Vec3::X;
+          Vec3 p = Matrix::translation(Vec3(0.0, 0.0, 10 * n)) * Matrix::rotateZ((float)n * 2.0 * M_PI / (float)10) * Matrix::scale(4.0) * Vec3::X();
           Vec3 np = r * p, op = next_r * p;
           canvas_2d.setVelocity(np - op);
           canvas_2d.renderSprite(logo, np, Vec3(0.5, 0.5), Vec3(scale / 2, scale / 2, 1.0), (float)n * 2.0 * M_PI / (float)10);
@@ -278,7 +278,7 @@ int game_main(int argc, char *argv[])
   done = false;
   canvas_3d.bind(shader_3d);
   
-  Vec3 light_color(Colors::White), ambient_color(light_color * 0.1);
+  Vec3 light_color(Colors::White()), ambient_color(light_color * 0.1);
   uint32_t light_id = canvas_3d.createPointLight(Vec3(0.0, 0.0, 0.0, 1.0), universe_size / 8.0, light_color);
   canvas_3d.setAmbientLight(ambient_color);
 
@@ -392,7 +392,7 @@ int game_main(int argc, char *argv[])
         case SDL_SCANCODE_0:
           if(event.type == SDL_KEYDOWN) {
             std::cout << "Reoriented the camera" << std::endl;
-            camera->lookAt(-Vec3::Z, Vec3::Y);
+            camera->lookAt(-Vec3::Z(), Vec3::Y());
           }
           break;
         case SDL_SCANCODE_G:
@@ -407,7 +407,7 @@ int game_main(int argc, char *argv[])
               camera = c;
             } else {
               fps_camera.setPosition(camera->position());
-              fps_camera.lookAt(-Vec3::Z, Vec3::Y);
+              fps_camera.lookAt(-Vec3::Z(), Vec3::Y());
               delete camera;
               camera = &fps_camera;
             }
@@ -663,7 +663,7 @@ int game_main(int argc, char *argv[])
               camera = c;
             } else {
               fps_camera.setPosition(camera->position());
-              fps_camera.lookAt(-Vec3::Z, Vec3::Y);
+              fps_camera.lookAt(-Vec3::Z(), Vec3::Y());
               delete camera;
               camera = &fps_camera;
             }
@@ -731,7 +731,7 @@ int game_main(int argc, char *argv[])
       //Vec3 light_pos(Matrix::rotateZ(SDL_GetTicks() * M_PI / 1000.0 / 8.0) * Matrix::rotateY(SDL_GetTicks() * M_PI / 1000.0 / 4.0) * Vec3(16.0, 0.0, 0.0));
       Vec3 light_pos(Vec3(0.0, 0.0, 0.0));
       canvas_3d.moveLight(light_id, light_pos);
-      canvas_3d.bindMaterial(GL_FRONT_AND_BACK, Canvas3D::AxisMaterial);
+      canvas_3d.bindMaterial(GL_FRONT_AND_BACK, Canvas3D::AxisMaterial());
       canvas_3d.renderPoint(light_pos, light_color, 10.0);
 
       //#ifdef RENDER_ORIGIN
@@ -742,18 +742,18 @@ int game_main(int argc, char *argv[])
       //#endif
 
 #ifdef RENDER_ROTATED_VECTOR
-      renderer.bindMaterial(GL_FRONT_AND_BACK, Canvas3D::AxisMaterial);
+      renderer.bindMaterial(GL_FRONT_AND_BACK, Canvas3D::AxisMaterial());
     
       for(int i = 0; i < 32; i++) {
         float t = 0; SDL_GetTicks() / 1000.0 * 2.0 * M_PI;
         float a = i * 2.0 * M_PI / 32.0;
         Vec3 angles = Vec3(a + t, a + t, a + t);
-        //renderer.renderVector(Vec3(), (Matrix::rotate(angles) * Vec3::X).normalize() * 10.0, Colors::Cyan);
-        //renderer.renderVector(Vec3(), (Matrix::rotate(angles * Vec3(1.0, 0.0, 1.0, 1.0)) * Vec3::X).normalize() * 10.0, Colors::Magenta);
+        //renderer.renderVector(Vec3(), (Matrix::rotate(angles) * Vec3::X()).normalize() * 10.0, Colors::Cyan());
+        //renderer.renderVector(Vec3(), (Matrix::rotate(angles * Vec3(1.0, 0.0, 1.0, 1.0)) * Vec3::X()).normalize() * 10.0, Colors::Magenta());
         canvas_3d.pushModelViewMatrix(); {
-          canvas_3d.mulModelViewMatrix(Matrix::rotate(Vec3::Y * t));
+          canvas_3d.mulModelViewMatrix(Matrix::rotate(Vec3::Y() * t));
           canvas_3d.setVelocity(Vec3());
-          canvas_3d.renderVector(Vec3(), (Matrix::rotate(angles) * Vec3::X).normalize() * 10.0, Colors::Magenta);
+          canvas_3d.renderVector(Vec3(), (Matrix::rotate(angles) * Vec3::X()).normalize() * 10.0, Colors::Magenta());
         } canvas_3d.popModelViewMatrix();
       }
 #endif
@@ -786,7 +786,7 @@ int game_main(int argc, char *argv[])
           canvas_2d.setModelViewMatrix(Matrix::identity());
           canvas_2d.setProjectionMatrix(Matrix::orthographicProjection(0.0, 0.0, 4.0, 4.0, 100.0, -100.0));
           canvas_2d.setVelocity(Vec3());
-          canvas_2d.setColor(Colors::White);
+          canvas_2d.setColor(Colors::White());
           canvas_2d.renderSprite(fb1.colors(), Vec3(0, 0, 0.0), Vec3(0.0, 0.0), Vec3(1.0, 1.0, 1.0), 0.0);
           canvas_2d.pushColorMatrix(); {
             //renderer.mulColorMatrix(Matrix::translation(0.5) * Matrix::scale(0.5));
@@ -833,12 +833,12 @@ void print_error(ShaderCompileError &e)
   std::cerr << "ShaderCompileError:" << e.path() << ":" << e.text() << ":" << e.msg() << std::endl;
 }
 
-static Material a(Colors::Red);
+static Material a(Colors::Red());
 
 int main(int argc, char *argv[])
 {
   try {
-    Material b = Material(Colors::Blue);
+    Material b = Material(Colors::Blue());
     return game_main(argc, argv);
   } catch(GLError &e) {
     print_error(e);

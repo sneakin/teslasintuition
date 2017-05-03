@@ -49,7 +49,7 @@ public:
       _canvas.pushProjectionMatrix(); {
         _canvas.setProjectionMatrix(Matrix::orthographicProjection(0.0, 0.0, 1.0, 1.0, 100.0, -100.0));
         _canvas.setVelocity(Vec3());
-        _canvas.setColor(Colors::White);
+        _canvas.setColor(Colors::White());
         for(int s = 0; s < _samples; s++ ) {
           Real scale = pow(0.5, s);
           _canvas.renderSprite(colors, Vec3(1.0 - scale, 0, -100), Vec3(0, 0), Vec3(scale * 0.5, scale * 0.5, 1.0), 0);

@@ -9,7 +9,7 @@ class FPSCamera: public Camera
 
 public:
   FPSCamera(const Vec3 &position, const Vec3 &angles)
-    : Camera(position), _angles(angles), _plane(Vec3::Y), _flying(false)
+    : Camera(position), _angles(angles), _plane(Vec3::Y()), _flying(false)
   {
     updateMatrix();
   }
@@ -41,7 +41,7 @@ public:
 
   void updateMatrix()
   {
-    setRotationMatrix(Matrix::rotate(_angles) * Matrix::orient(_plane.cross(Vec3::Z), _plane, -Vec3::Z));
+    setRotationMatrix(Matrix::rotate(_angles) * Matrix::orient(_plane.cross(Vec3::Z()), _plane, -Vec3::Z()));
   }
 
   const Vec3 &plane() const { return _plane; }

@@ -7,7 +7,7 @@ class Camera
   Matrix _matrix;
 
 public:
-  Camera(const Vec3 &position, const Vec3 &forward = Vec3::nZ, const Vec3 &up = Vec3::Y)
+  Camera(const Vec3 &position, const Vec3 &forward = Vec3::nZ(), const Vec3 &up = Vec3::Y())
   {
     setPosition(position);
     lookAt(forward, up);
@@ -65,7 +65,7 @@ public:
 
   //const Vec3 &angle() const { return _angle; }
 
-  Real yaw() const { return M_PI + acosr(Vec3::X.dot(right())); }
+  Real yaw() const { return M_PI + acosr(Vec3::X().dot(right())); }
 
   /*
   Real pitch() const { return _angle.x(); }
