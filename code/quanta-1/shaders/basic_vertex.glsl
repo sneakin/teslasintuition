@@ -15,7 +15,7 @@ out vec3 Vert;
 out vec4 Vert_screen;
 out vec3 Velocity;
 out vec3 Vert_Lastframe;
-out vec2 Vert_screen_lastframe;
+out vec4 Vert_screen_lastframe;
 
 void main()
 {
@@ -24,7 +24,7 @@ void main()
   Vert = vec3(mModelView * inPosition);
   Vert_Lastframe = vec3(mModelView * inPosition - vec4(uVelocity, 0.0));
   Vert_screen = mProjection * mModelView * inPosition;
-  Vert_screen_lastframe = vec2(mProjection * (mModelView * inPosition - vec4(uVelocity, 0.0)));
+  Vert_screen_lastframe = mProjection * (mModelView * inPosition - vec4(uVelocity, 0.0));
   Velocity = uVelocity;
   Texture = vec2(mTexture * inTexture);
   gl_Position = Vert_screen;

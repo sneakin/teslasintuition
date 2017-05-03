@@ -36,7 +36,8 @@
 #define APP_WIDTH 800
 #define APP_HEIGHT 600
 
-#end
+using std::isnan;
+using std::isinf;
 
 const std::string APP_TEXTURE_PATH = "assets/textures/";
 
@@ -51,7 +52,7 @@ using std::endl;
 
 int window_width = APP_WIDTH, window_height = APP_HEIGHT;
 
-int main(int argc, char *argv[])
+int game_main(int argc, char *argv[])
 {
   unsigned int frames = 0, ms_per_frame = 0, frame_start = 0;
   int joystick_index = 0;
@@ -772,7 +773,7 @@ int main(int argc, char *argv[])
     //renderer.defaultFramebuffer();
     canvas_2d.bindFramebuffer(fb2);
     mblur.render(fb1.colors(), fb1.depth(), fb1.velocity(), fb1.bloom());
-    bloom.render(renderer.defaultFramebuffer(), fb2.colors(), fb2.bloom(), 2.0);
+    bloom.render(renderer.defaultFramebuffer(), fb2.colors(), fb2.bloom(), 1.5);
     //bloom.render(renderer.defaultFramebuffer(), fb1.colors(), fb1.bloom(), 1.0);
 
     // side panes
@@ -812,3 +813,42 @@ int main(int argc, char *argv[])
 
   return 0;
 }
+
+void print_error(GLError &e)
+{
+  std::cerr << "GLError:" << e.error()
+	    << ":" << e.error_msg()
+	    << ":" << e.file()
+	    << ":" << e.line()
+	    << std::endl;
+}
+
+void print_error(ShaderProgramLinkError &e)
+{
+  std::cerr << "ShaderProgramLinkError:" << e.msg() << std::endl;
+}
+
+void print_error(ShaderCompileError &e)
+{
+  std::cerr << "ShaderCompileError:" << e.path() << ":" << e.text() << ":" << e.msg() << std::endl;
+}
+
+static Material a(Colors::Red);
+
+int main(int argc, char *argv[])
+{
+  try {
+    Material b = Material(Colors::Blue);
+    return game_main(argc, argv);
+  } catch(GLError &e) {
+    print_error(e);
+    return -1;
+  } catch(ShaderProgramLinkError &e) {
+    print_error(e);
+    return -1;
+  } catch(ShaderCompileError &e) {
+    print_error(e);
+    return -1;
+  }
+}
+#end

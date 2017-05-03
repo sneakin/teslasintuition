@@ -12,7 +12,7 @@ uniform float uFPS = 60.0, uTargetFPS = 60.0;
 
 smooth in vec4 Color;
 smooth in vec2 Texture;
-smooth in vec4 Normal;
+smooth in vec3 Normal;
 smooth in vec3 Vert;
 smooth in vec4 Vert_screen;
 in vec3 Velocity;

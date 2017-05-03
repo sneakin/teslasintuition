@@ -9,10 +9,20 @@ class Material
   Real _shininess;
 
 public:
-  static const Material Default;
+  static const Material Default = Material(Colors::White);
   
   Material(const Vec3 &diffuse = Colors::White, const Vec3 &specular = Colors::White, Real shininess = 48.0, const Vec3 &ambient = Colors::White, const Vec3 &emission = Colors::Black)
     : _diffuse(diffuse), _specular(specular), _emission(emission), _shininess(shininess), _ambient(ambient)
+  {
+    std::cerr << "Diffuse: " << _diffuse << "\t" << diffuse << std::endl;
+  }
+
+  Material(const Material &m)
+    : _diffuse(m._diffuse),
+      _specular(m._specular),
+      _emission(m._emission),
+      _shininess(m._shininess),
+      _ambient(m._ambient)
   {
   }
 
@@ -22,3 +32,4 @@ public:
   const Vec3 &ambient() const { return _ambient; }
   int shininess() const { return _shininess; }
 };
+

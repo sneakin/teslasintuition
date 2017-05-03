@@ -2,6 +2,11 @@
 #include "vec3.h"
 #end
 
+#src
+using std::isnan;
+using std::isinf;
+#end
+
 class Colors
 {
 public:

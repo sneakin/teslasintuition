@@ -6,9 +6,13 @@ quanta_SRC = math-fun.lzz \
 	real.lzz \
 	vec3.lzz \
 	index_out_of_bounds_error.lzz \
+	argument_error.lzz \
+	not_found_error.lzz \
+	really_not_found_error.lzz \
 	matrix.lzz \
 	colors.lzz \
   sdl.lzz \
+	image.lzz \
 	renderer/material.lzz \
 	renderer/texture.lzz \
 	renderer/textured_material.lzz \
@@ -16,14 +20,24 @@ quanta_SRC = math-fun.lzz \
 	renderer/fps_camera.lzz \
 	stack_with_callback.lzz \
 	renderer/uniform_matrix_stack.lzz \
-	renderer/square_mesh.lzz \
-	renderer/line_mesh.lzz \
-	renderer/gl3/framebuffer.lzz \
 	renderer/gl3/renderbuffer.lzz \
-	image.lzz \
+	renderer/gl3/framebuffer.lzz \
 	renderer.lzz \
-	geometry/triangle.lzz \
+	shader.lzz \
+	vertex_shader.lzz \
+	fragment_shader.lzz \
+	shader_program.lzz \
+	shader_unit.lzz \
+	vertex_array.lzz \
+	array_buffer.lzz \
 	geometry/icosahedron.lzz \
+	index_buffer.lzz \
+	canvas/framebuffer_texture.lzz \
+	canvas/stock_shader_program.lzz \
+	canvas.lzz \
+	renderer/line_mesh.lzz \
+	renderer/square_mesh.lzz \
+	geometry/triangle.lzz \
 	geometry/icosahedron_renderer.lzz \
 	player_command_state.lzz \
 	xpad.lzz \
@@ -31,20 +45,6 @@ quanta_SRC = math-fun.lzz \
 	quanta.lzz \
 	quanta_renderer.lzz \
 	screen_shooter.lzz \
-	argument_error.lzz \
-	not_found_error.lzz \
-	really_not_found_error.lzz \
-  shader_unit.lzz \
-	shader_program.lzz \
-	shader.lzz \
-	vertex_shader.lzz \
-	fragment_shader.lzz \
-	vertex_array.lzz \
-	array_buffer.lzz \
-	index_buffer.lzz \
-	canvas/framebuffer_texture.lzz \
-  canvas/stock_shader_program.lzz \
-	canvas.lzz \
 	effects/downsampler.lzz \
 	effects/base_blur.lzz \
 	effects/horizontal_blur.lzz \
@@ -57,7 +57,7 @@ quanta_SRC = math-fun.lzz \
 
 CFLAGS+=$(GLEW_CFLAGS)
 CXXFLAGS+=$(GLEW_CFLAGS)
-LDFLAGS+=$(GLEW_LDFLAGS) -lGLEW
+LDFLAGS+=$(GLEW_LDFLAGS)
 #LZZFLAGS+=$(GLEW_CFLAGS)
 
 ifeq ($(shell uname), Darwin)
@@ -78,9 +78,16 @@ endef
 
 $(foreach prog,$(PROGRAMS),$(eval $(call add_osx_object,$(prog))))
 else # MAC
+ifdef WINDOWS
+LDFLAGS+=-Lvendor/root/lib -lopengl32 -lglu32 `sdl2-config --libs`
+CFLAGS+=-std=c++0x
+CFLAGS+=-g -Ivendor/root/include -Ivendor/sha1 -Ivendor/gl
+CFLAGS+=`sdl2-config --cflags`
+else # WINDOWS
 LDFLAGS+=-Lvendor/root/lib -lSDL2 -lGL -lGLU
 CFLAGS+=-std=c++0x
 CFLAGS+=-g -Ivendor/root/include -Ivendor/sha1 -Ivendor/gl
+endif # WINDOWS
 endif # MAC
 
 ifdef PROFILE
@@ -105,6 +112,11 @@ endif
 
 ifdef BADMATH
 CFLAGS+=-DBADMATH
+endif
+
+ifdef SLOW_VECTOR
+CFLAGS+=-DSLOW_VECTOR=1
+LZZFLAGS+=-DSLOW_VECTOR=1
 endif
 
 ifdef CHEAPER_MATH

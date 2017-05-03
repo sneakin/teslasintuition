@@ -331,7 +331,7 @@ class Canvas3D: public Canvas
   Material _material;
   
 public:
-  static const Material AxisMaterial = Material(Colors::Clear, Colors::Clear, 0.0, Colors::White, Colors::White);
+  static const Material AxisMaterial = Material(Colors::White, Colors::Clear, 0.0, Colors::White, Colors::White);
   
   Canvas3D(Renderer &renderer)
     : Canvas(renderer)

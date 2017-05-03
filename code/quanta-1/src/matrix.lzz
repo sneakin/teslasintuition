@@ -12,6 +12,10 @@
 #endif
 #end
 
+#src
+using std::isnan;
+#end
+
 class Matrix
 {
   RealArray_16 _values;
@@ -204,6 +208,7 @@ public:
     return ret;
   }
 
+  // todo could use: (-1)^(x + y) http://www.purplemath.com/modules/minors.htm
   Real sign(int x, int y) const
   {
     return (x*4+(y+x%2)) % 2 ? (Real)-1.0 : (Real)1.0;

@@ -25,13 +25,17 @@ public:
 class ShaderCompileError
 {
 private:
-  const string &_path, &_txt, &_msg;
+  string _path, _txt, _msg;
 
 public:
   ShaderCompileError(const string &path, const string &txt, const string &msg)
     : _path(path), _txt(txt), _msg(msg)
   {
   }
+
+  const string &path() const { return _path; }
+  const string &text() const { return _txt; }
+  const string &msg() const { return _msg; }
 };
 
 class Shader

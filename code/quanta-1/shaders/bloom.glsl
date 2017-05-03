@@ -13,14 +13,14 @@ uniform float uFPS = 60.0, uTargetFPS = 60.0;
 
 smooth in vec4 Color;
 smooth in vec2 Texture;
-smooth in vec4 Normal;
+smooth in vec3 Normal;
 smooth in vec3 Vert;
 smooth in vec4 Vert_screen;
 in vec3 Velocity;
 
 out vec4 outColor;
 
-vec4 downsample(sampler2D tex, vec2 pos, int samples, int start = 0)
+vec4 downsample(sampler2D tex, vec2 pos, int samples, int start)
 {
   vec4 s;
   vec2 texel = textureSize(tex, 0);

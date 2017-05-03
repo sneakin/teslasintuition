@@ -13,6 +13,8 @@
 
 #src
 #include <stdlib.h>
+
+using std::isnan;
 #end
 
 class Vec3
@@ -46,6 +48,7 @@ public:
   }
   Vec3(const Vec3 &other)
   {
+    std::cerr << "Vec3::Vec3(" << other << ")" << std::endl;
     set(other);
   }
 
@@ -237,6 +240,7 @@ public:
 
   void set(const Vec3 &other)
   {
+    std::cerr << *this << "::set(" << other << ")" << std::endl;
 #ifdef SLOW_VECTOR
     for(int i = 0; i < 4; i++) {
       _v[i] = other._v[i];

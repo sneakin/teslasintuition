@@ -17,6 +17,8 @@ public:
     : _program(p), _msg(msg)
   {
   }
+
+  const std::string &msg() const { return _msg; }
 };
 
 class ShaderProgram

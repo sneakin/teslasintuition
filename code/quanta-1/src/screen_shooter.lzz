@@ -5,6 +5,7 @@
 
 #src
 #include <iostream>
+#include <string.h>
 #include <SDL2/SDL.h>
 #include "gl.h"
 #end

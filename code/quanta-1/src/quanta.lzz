@@ -10,6 +10,9 @@
 #define warn(condition) { \
   if(!(condition)) { std::cout << "Warning:" << __LINE__ << ": " << #condition << std::endl; } \
 }
+
+using std::isnan;
+using std::isinf;
 #end
 
 class Quanta

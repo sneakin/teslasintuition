@@ -6,9 +6,11 @@
 # PROGRAMS += program
 #
 
+$(warning Including Makefile.generic)
+
 all: do-build
 
-.PHONY: all
+.PHONY: all d-programs
 
 SRCDIR=src
 
@@ -46,21 +48,21 @@ $(CODEDIR)/%.h: src/%.lzz
 
 $(OBJDIR)/%.o: $(CODEDIR)/%.cpp $(DEPDIR)/%.depend
 	mkdir -p $(@D)
-	$(CXX) $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) -c -o $@ $<
+	$(CXX) -c -o $@ $< $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp $(DEPDIR)/%.depend
 	mkdir -p $(@D)
-	$(CXX) $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) -c -o $@ $<
+	$(CXX) -c -o $@ $< $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS)
 
-define PROGRAM_template =
- OBJECTS = $$(addprefix $(OBJDIR)/, $$(patsubst %.cpp,%.o,$$(patsubst %.lzz,%.o,$$($(1)_SRC))))
+define PROGRAM_template
+ OBJECTS=$$(foreach obj,$$($(1)_SRC),$$(addprefix $(OBJDIR)/, $$(patsubst %.cpp,%.o,$$(patsubst %.lzz,%.o,$$(obj)))))
  $$(BINDIR)/$(1): $$(OBJECTS)
 	@echo $$^
 	mkdir -p $$(@D)
-	$$(CXX) $$(CFLAGS) $$(LDFLAGS) -o $$@ $$^
- ALL_OBJECTS += $$(OBJECTS)
- ALL_PROGRAMS += $$(BINDIR)/$(1)
- ALL_SRC += $(call $(1)_SRC)
+	$$(CXX) -o $$@ $$^ $$(CFLAGS) $$(LDFLAGS)
+ ALL_OBJECTS+=$$(OBJECTS)
+ ALL_PROGRAMS+=$$(BINDIR)/$(1)
+ ALL_SRC+=$(call $(1)_SRC)
 endef
 
 $(foreach prog,$(PROGRAMS),$(eval $(call PROGRAM_template,$(prog))))
@@ -68,7 +70,8 @@ $(foreach prog,$(PROGRAMS),$(eval $(call PROGRAM_template,$(prog))))
 do-build: do-dirs $(ALL_PROGRAMS)
 
 d-programs:
-	@echo Programs: $(ALL_PROGRAMS)
+	@echo Programs: $(PROGRAMS)
+	@echo All programs: $(ALL_PROGRAMS)
 	@echo Objects: $(ALL_OBJECTS)
 	@echo Sources: $(ALL_SRC)
 
@@ -85,7 +88,7 @@ $(DEPDIR)/%.depend: $(SRCDIR)/%.cpp
 	mkdir -p $(@D)
 	$(CXX) -MM $(CPPFLAGS) $(CXXFLAGS) $^ | sed 's;\([^ ]*\)\.o:;$$(OBJDIR)/\1\.o $$(DEPDIR)/\1\.depend:;' > $@
 
-.depend: $(addprefix $(DEPDIR)/, $(PLANETS_SRC:.lzz=.depend)) $(addprefix $(DEPDIR)/, $(NOISE_TEST_SRC:.lzz=.depend))
+.depend: $(addprefix $(DEPDIR)/, $(ALL_SRC:.lzz=.depend))
 	echo sinclude $^ > .depend
 
 sinclude .depend

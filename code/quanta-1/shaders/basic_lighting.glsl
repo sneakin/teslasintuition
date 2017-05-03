@@ -65,11 +65,13 @@ void main()
   if(!gl_FrontFacing) {
     normal = -normal;
   }
+  
   vec3 light_dir = normalize(Light0Position);
   float d = Light0Distance;
   float falloff = uLight.intensity / d;
   float brightness = max(dot(light_dir, normal), 0.0);
   vec3 diffuse = vec3(uMaterial.diffuse) * brightness * vec3(uLight.color) * falloff;
+  //vec3 diffuse = brightness * vec3(uLight.color) * falloff;
 
   vec3 surf_to_cam = -normalize(vec3(Vert.x, Vert.y, Vert.z));
   vec3 r = reflect(-light_dir, normal);
@@ -85,7 +87,7 @@ void main()
   vec3 emission = vec3(uMaterial.emission) * surf_color;
   vec3 c = clamp(ambient + diffuse + specular, 0.0, 1.0) * vec3(surf_color) + super_specular;
   c = max(c, emission);
-
+  
   outColor = mColor * vec4(c.r, c.g, c.b, 1.0);
   outColor.a = tex_color.a;
   //outVelocity = powv((Vert_screen - Vert_screen_lastframe) * 0.5 + 0.5, 3.0);

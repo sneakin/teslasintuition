@@ -21,22 +21,13 @@ out vec4 outDepth;
 
 int MAX_INT = 0xFFFFFFF;
 
-vec4 powv(vec4 v, float e)
-{
-  return vec4(pow(v.x, e),
-              pow(v.y, e),
-              pow(v.z, e),
-              pow(v.w, e));
-}
-
 void main()
 {
   outColor = mColor * (vec4(texture(tex, Texture).rgb, 1.0) * Color);
-  outVelocity = Vert_screen - Vert_screen_lastframe;
+
+  outVelocity = (Vert_screen - Vert_screen_lastframe);
   outVelocity = outVelocity * 0.5 + 0.5;
-  //outVelocity = powv(outVelocity, 1.0 / 3.0);
   float far = 200.0, near = -200.0;
-  //vec4 d = vec4(Vert_screen.x, Vert_screen.y, Vert_screen.z, float(uFragmentId) / float(MAX_INT));
   vec4 d = vec4(1.0 / Vert_screen.z, float(uFragmentId) / float(10), 0, 0);
   outDepth = d; //0.5 + vec3(Vert) / (far - near);
 }
