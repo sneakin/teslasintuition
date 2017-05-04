@@ -1,6 +1,6 @@
 all: do-build
 
-PROGRAMS = quanta
+PROGRAMS = quanta test_msys
 
 quanta_SRC = math-fun.lzz \
 	real.lzz \
@@ -54,6 +54,12 @@ quanta_SRC = math-fun.lzz \
 	effects/motion_blur.lzz \
 	effects/bloom.lzz \
 	main.lzz
+
+test_msys_SRC = vec3.lzz \
+	colors.lzz \
+	renderer/material.lzz \
+	sdl.lzz \
+	test_msys.lzz
 
 CFLAGS+=$(GLEW_CFLAGS)
 CXXFLAGS+=$(GLEW_CFLAGS)

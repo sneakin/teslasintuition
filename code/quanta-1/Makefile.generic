@@ -6,7 +6,7 @@
 # PROGRAMS += program
 #
 
-$(warning Including Makefile.generic)
+$(info Including Makefile.generic)
 
 all: do-build
 
@@ -24,25 +24,22 @@ LZZFLAGS+=-I$(OUTDIR)/cpp -I$(SRCDIR)
 CFLAGS+=-I$(OUTDIR)/cpp -I$(SRCDIR)
 CXXFLAGS+=-I$(OUTDIR)/cpp -I$(SRCDIR)
 
-$(OUTDIR):
-ifeq ($(wildcard $@),)
-	mkdir -p $@
-endif
+define DIRECTORY
+ $(1):
+	mkdir -p $$@
+ SUBDIRS+=$(1)
+ .PHONY: $(1)
+endef
 
-$(CODEDIR) $(OBJDIR) $(BINDIR): $(OUTDIR)
-ifeq ($(wildcard $@),)
-	mkdir -p $@
-endif
+$(foreach dir,$(OUTDIR) $(CODEDIR) $(OBJDIR) $(BINDIR) $(DEPDIR),$(eval $(call DIRECTORY,$(dir))))
 
-SUBDIRS=$(CODEDIR) $(OBJDIR) $(BINDIR)
+.PRECIOUS: $(SRCDIR) $(CODEDIR)/%.cpp $(DEPDIR)/%.depend
 
-.PRECIOUS: $(CODEDIR)/%.cpp $(DEPDIR)/%.depend
-
-$(CODEDIR)/%.cpp: src/%.lzz
+$(CODEDIR)/%.cpp: $(SRCDIR)/%.lzz
 	mkdir -p $(@D)
 	$(LZZ) -x $(LZZFLAGS) -o $(@D) $<
 
-$(CODEDIR)/%.h: src/%.lzz
+$(CODEDIR)/%.h: $(SRCDIR)/%.lzz
 	mkdir -p $(@D)
 	$(LZZ) -x $(LZZFLAGS) -o $(@D) $<
 
@@ -55,14 +52,14 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp $(DEPDIR)/%.depend
 	$(CXX) -c -o $@ $< $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS)
 
 define PROGRAM_template
- OBJECTS=$$(foreach obj,$$($(1)_SRC),$$(addprefix $(OBJDIR)/, $$(patsubst %.cpp,%.o,$$(patsubst %.lzz,%.o,$$(obj)))))
- $$(BINDIR)/$(1): $$(OBJECTS)
-	@echo $$^
+ $(1)_OBJECTS=$$(foreach obj,$$($(1)_SRC),$$(addprefix $$(OBJDIR)/, $$(patsubst %.cpp,%.o,$$(patsubst %.lzz,%.o,$$(obj)))))
+ $$(BINDIR)/$(1): $$($(1)_OBJECTS)
 	mkdir -p $$(@D)
 	$$(CXX) -o $$@ $$^ $$(CFLAGS) $$(LDFLAGS)
- ALL_OBJECTS+=$$(OBJECTS)
+ ALL_OBJECTS+=$$($(1)_OBJECTS)
  ALL_PROGRAMS+=$$(BINDIR)/$(1)
- ALL_SRC+=$(call $(1)_SRC)
+ ALL_SRC_BAH+=$$(foreach obj, $$($(1)_SRC), $$(addprefix $$(SRCDIR)/, $$(obj)))
+ ALL_SRC+=$$($(1)_SRC)
 endef
 
 $(foreach prog,$(PROGRAMS),$(eval $(call PROGRAM_template,$(prog))))
@@ -74,6 +71,7 @@ d-programs:
 	@echo All programs: $(ALL_PROGRAMS)
 	@echo Objects: $(ALL_OBJECTS)
 	@echo Sources: $(ALL_SRC)
+	@echo Dirs: $(SUBDIRS)
 
 .PHONY: do-build d-programs
 
@@ -89,7 +87,8 @@ $(DEPDIR)/%.depend: $(SRCDIR)/%.cpp
 	$(CXX) -MM $(CPPFLAGS) $(CXXFLAGS) $^ | sed 's;\([^ ]*\)\.o:;$$(OBJDIR)/\1\.o $$(DEPDIR)/\1\.depend:;' > $@
 
 .depend: $(addprefix $(DEPDIR)/, $(ALL_SRC:.lzz=.depend))
-	echo sinclude $^ > .depend
+	echo '$(info Including .depend)' > .depend
+	echo sinclude $^ >> .depend
 
 sinclude .depend
 

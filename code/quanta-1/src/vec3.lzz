@@ -13,8 +13,6 @@
 
 #src
 #include <stdlib.h>
-
-using std::isnan;
 #end
 
 class Vec3
@@ -239,7 +237,7 @@ public:
 
   bool isNaN() const {
     for(int i = 0; i < 4; i++) {
-      if(isnan(_v[i])) return true;
+      if(std::isnan(_v[i])) return true;
     }
     return false;
   }

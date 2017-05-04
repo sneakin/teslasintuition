@@ -13,7 +13,6 @@
 #end
 
 #src
-using std::isnan;
 #end
 
 class Matrix
@@ -293,7 +292,7 @@ public:
   {
     for(int i = 0; i < 4; i++) {
       for(int j = 0; j < 4; j++) {
-        if(isnan(get(i, j))) {
+        if(std::isnan(get(i, j))) {
           return true;
         }
       }

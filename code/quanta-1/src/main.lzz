@@ -36,9 +36,6 @@
 #define APP_WIDTH 800
 #define APP_HEIGHT 600
 
-using std::isnan;
-using std::isinf;
-
 const std::string APP_TEXTURE_PATH = "assets/textures/";
 
 #ifdef MAC
@@ -686,13 +683,13 @@ int game_main(int argc, char *argv[])
 
     Real sec_per_frame = ms_per_frame / 1000.0;
 
-    if(!isnan(joy_roll)) {
+    if(!std::isnan(joy_roll)) {
       droll -= joy_roll * sec_per_frame;
     }
-    if(!isnan(joy_pitch)) {
+    if(!std::isnan(joy_pitch)) {
       dpitch -= joy_pitch * sec_per_frame;
     }
-    if(!isnan(joy_yaw)) {
+    if(!std::isnan(joy_yaw)) {
       dyaw -= joy_yaw * sec_per_frame;
     }
 

@@ -10,9 +10,6 @@
 #define warn(condition) { \
   if(!(condition)) { std::cout << "Warning:" << __LINE__ << ": " << #condition << std::endl; } \
 }
-
-using std::isnan;
-using std::isinf;
 #end
 
 class Quanta
@@ -87,7 +84,7 @@ public:
       for(int j = 0; j < size(); j++) {
         if(i != j && seen[i] != true && seen[j] != true) {
           Real t = collidesAt((*this)[i], (*this)[j], dt);
-          if(!isnan(t)) {
+          if(!std::isnan(t)) {
             colliders.insert(collision_t(t, j));
           }
         }
@@ -99,7 +96,7 @@ public:
       if(colliders.size() > 0) {
         for(auto c: colliders) { // todo verify positioning and timing of 2nd and subsequent collision
           Real t = collidesAt((*this)[i], (*this)[c.second], t_remaining);
-          if(!isnan(t)) {
+          if(!std::isnan(t)) {
             collide((*this)[i], (*this)[c.second], t, t_remaining);
             t_remaining -= t;
           }
@@ -152,7 +149,7 @@ public:
     Real tm = (-j - sqrt(bac)) / (2.0*k);
 
     // pick the t
-    if((isnan(tp) || tp < 0.0 || tp > dt) && (isnan(tm) || tm < 0.0 || tm > dt)) {
+    if((std::isnan(tp) || tp < 0.0 || tp > dt) && (std::isnan(tm) || tm < 0.0 || tm > dt)) {
       //std::cerr << "No collision between " << a.position() << ":" << a.velocity() << " and " << b.position() << ":" << b.velocity() << "? " << tp << " " << tm << minimum(tp, tm) << "\t" << (a.position() - b.position()).magnitude() << std::endl;
       return NAN;
     }

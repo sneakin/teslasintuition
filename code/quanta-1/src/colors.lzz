@@ -3,8 +3,6 @@
 #end
 
 #src
-using std::isnan;
-using std::isinf;
 #end
 
 class Colors
@@ -41,9 +39,9 @@ public:
 
   static Vec3 color(Real n)
   {
-    if(isinf(n)) {
+    if(std::isinf(n)) {
       return White();
-    } else if(isnan(n)) {
+    } else if(std::isnan(n)) {
       return Black();
     } else {
       Vec3 a = color((int)floorr(n)), b = color((int)ceilr(n));
