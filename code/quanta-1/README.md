@@ -4,6 +4,9 @@ Quanta-1
 Presently this is a simulation of Newtonian spheres. They bounce off of each
 other in a mesmerizing OpenGL display.
 
+[Preview](assets/quanta-full.mp4)
+
+
 Building
 ===
 
