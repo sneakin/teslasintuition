@@ -1,6 +1,6 @@
 all: do-build
 
-PROGRAMS = quanta test_msys
+PROGRAMS = quanta
 
 quanta_SRC = math-fun.lzz \
 	real.lzz \
@@ -55,12 +55,6 @@ quanta_SRC = math-fun.lzz \
 	effects/bloom.lzz \
 	main.lzz
 
-test_msys_SRC = vec3.lzz \
-	colors.lzz \
-	renderer/material.lzz \
-	sdl.lzz \
-	test_msys.lzz
-
 CFLAGS+=$(GLEW_CFLAGS)
 CXXFLAGS+=$(GLEW_CFLAGS)
 LDFLAGS+=$(GLEW_LDFLAGS)
@@ -85,6 +79,7 @@ endef
 $(foreach prog,$(PROGRAMS),$(eval $(call add_osx_object,$(prog))))
 else # MAC
 ifdef WINDOWS
+EXE_SUFFIX=.exe
 LDFLAGS+=-Lvendor/root/lib -lopengl32 -lglu32 `sdl2-config --libs`
 CFLAGS+=-std=c++0x
 CFLAGS+=-g -Ivendor/root/include -Ivendor/sha1 -Ivendor/gl
@@ -134,6 +129,24 @@ CXXFLAGS=$(CFLAGS)
 
 include Makefile.generic
 
+ifdef WINDOWS
+$(OUTDIR)/run:
+	mkdir -p $@
+
+$(OUTDIR)/run/shaders: $(wildcard shaders/*.glsl) $(OUTDIR)/run
+	cp -r shaders $(OUTDIR)/run/shaders
+
+$(OUTDIR)/run/assets: assets $(OUTDIR)/run
+	cp -r assets $(OUTDIR)/run/assets
+
+.PHONEY+=run
+
+run: $(BINDIR)/quanta$(EXE_SUFFIX) $(OUTDIR)/run/shaders $(OUTDIR)/run/assets
+	cp vendor/glew-2.0.0/lib/*.dll $(OUTDIR)/run
+	cd $(OUTDIR)/run ; ../../$< ; cd ../..
+
+else
 run: $(BINDIR)/quanta
 	LD_LIBRARY_PATH=vendor/root/lib ./$<
+endif
 
